@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "home": "Home",
+    "categories": "Categories",
+    "search": "Search",
+    "wishlist": "Wishlist",
+    "account": "Account",
+    "cart": "Cart",
+    "login": "Login",
+    "register": "Register"
+  },
+  "home": {
+    "hero_cta": "Shop Now",
+    "free_delivery": "Free delivery on orders above ৳1000",
+    "featured": "Featured Products",
+    "top_brands": "Top Brands",
+    "new_arrivals": "New Arrivals",
+    "shop_under": "Shop Under"
+  },
+  "product": {
+    "add_to_cart": "Add to Cart",
+    "buy_now": "Buy Now",
+    "out_of_stock": "Out of Stock",
+    "in_stock": "In Stock",
+    "reviews": "Reviews",
+    "description": "Description",
+    "specifications": "Specifications"
+  },
+  "cart": {
+    "title": "Your Cart",
+    "empty": "Your cart is empty",
+    "subtotal": "Subtotal",
+    "savings": "You save",
+    "shipping": "Shipping",
+    "free": "FREE",
+    "checkout": "Proceed to Checkout",
+    "continue": "Continue Shopping"
+  },
+  "trust": {
+    "cod": "Cash on Delivery",
+    "return": "Easy Returns",
+    "delivery": "Delivery in 48hrs",
+    "price": "Best Price"
+  }
+}

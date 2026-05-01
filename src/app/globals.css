@@ -1,26 +1,204 @@
-@import "tailwindcss";
+@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Colors */
+  --color-primary: #ff3e9b;
+  --color-primary-light: #ff88ba;
+  --color-primary-pale: #ffedfa;
+  --color-primary-dark: #d4006f;
+
+  /* Border radius */
+  --radius: 0.5rem;
+
+  /* Font families */
+  --font-display: system-ui, -apple-system, sans-serif;
+  --font-body: system-ui, -apple-system, sans-serif;
+  --font-bengali: "Hind Siliguri", system-ui, -apple-system, sans-serif;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  --shadow-pink: 0 4px 14px -2px rgb(255 62 155 / 0.3);
+  --shadow-pink-lg: 0 10px 25px -3px rgb(255 62 155 / 0.4);
+
+  /* Gradients */
+  --background-image-gradient-primary: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-primary-dark)
+  );
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Base styles */
+* {
+  border-color: rgb(229 231 235);
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  color: rgb(17 24 39);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+/* Bengali mode */
+[lang="bn"] body {
+  font-family: var(--font-bengali);
+}
+
+/* scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+::-webkit-scrollbar-thumb {
+  background: #ff88ba;
+  border-radius: 2px;
+}
+
+/* selection */
+::selection {
+  background: #ffedfa;
+  color: #d4006f;
+}
+
+/* Component utilities (can be applied via @utility in v4) */
+.btn-primary {
+  background-image: var(--background-image-gradient-primary);
+  color: white;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-pink);
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+.btn-primary:hover {
+  box-shadow: var(--shadow-pink-lg);
+  filter: brightness(1.05);
+}
+.btn-primary:active {
+  transform: scale(0.95);
+}
+
+.btn-secondary {
+  border-width: 2px;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  transition-property: all;
+  transition-duration: 200ms;
+}
+.btn-secondary:hover {
+  background-color: var(--color-primary);
+  color: white;
+}
+.btn-secondary:active {
+  transform: scale(0.95);
+}
+
+.btn-ghost {
+  color: rgb(75 85 99);
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  transition-property: all;
+  transition-duration: 200ms;
+}
+.btn-ghost:hover {
+  background-color: var(--color-primary-pale);
+  color: var(--color-primary);
+}
+
+.card {
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition-property: box-shadow;
+  transition-duration: 300ms;
+}
+.card:hover {
+  box-shadow: var(--shadow-pink);
+}
+
+.badge-primary {
+  background-color: var(--color-primary);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.badge-discount {
+  background-color: rgb(239 68 68);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: rgb(17 24 39);
+}
+@media (min-width: 768px) {
+  .section-title {
+    font-size: 1.875rem;
+  }
+}
+
+.container-elite {
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+@media (min-width: 640px) {
+  .container-elite {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .container-elite {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.skeleton {
+  background-image: linear-gradient(
+    to right,
+    rgb(243 244 246),
+    rgb(229 231 235),
+    rgb(243 244 246)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
