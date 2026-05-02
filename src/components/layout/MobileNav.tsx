@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Grid, Search, Heart, User } from "lucide-react";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "@/store";
+import { useDispatch } from "react-redux";
 import { toggleSearch } from "@/store/slices/uiSlice";
 
 const NAV_ITEMS = [

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 import { store } from "@/store";
 import { clearCredentials, setCredentials } from "@/store/slices/authSlice";

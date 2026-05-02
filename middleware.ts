@@ -1,144 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import createMiddleware from "next-intl/middleware";
-import { getCurrentUser } from "@/services/auth.service";
 
-// type Role = "CUSTOMER" | "VENDOR" | "ADMIN" | "SUPERADMIN";
+// routes that require authentication
+const PROTECTED_CUSTOMER = ["/account", "/checkout", "/cart"];
+const PROTECTED_VENDOR = ["/vendor"];
+const PROTECTED_ADMIN = ["/admin"];
 
-// Public routes (no auth required)
-const publicRoutes = ["/"];
+export default async function middleware(req: NextRequest) {
+  const pathname = req.nextUrl.pathname;
+  const accessToken = req.cookies.get("accessToken")?.value;
 
-// Auth routes (redirect to dashboard if already logged in)
-const authRoutes = ["/login", "/register"];
+  // check protected routes
+  const isCustomerRoute = PROTECTED_CUSTOMER.some((r) =>
+    pathname.startsWith(r),
+  );
+  const isVendorRoute = PROTECTED_VENDOR.some((r) => pathname.startsWith(r));
+  const isAdminRoute = PROTECTED_ADMIN.some((r) => pathname.startsWith(r));
 
-// Role-based route patterns
-const roleBasedRoutes = {
-  CUSTOMER: [/^\/account\/.*/, /^\/cart$/, /^\/checkout$/],
-  VENDOR: [/^\/vendor\/.*/],
-  ADMIN: [/^\/admin\/.*/],
-  SUPERADMIN: [/^\/admin\/.*/],
-};
-
-// ✅ i18n middleware instance
-const intlMiddleware = createMiddleware({
-  locales: ["en", "bn"],
-  defaultLocale: "en",
-});
-
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // 1. Run i18n FIRST (critical)
-  const intlResponse = intlMiddleware(request);
-
-  // If i18n already wants to redirect (e.g. add /en), return it
-  if (intlResponse) return intlResponse;
-
-  // 2. Get user info
-  const userInfo = await getCurrentUser();
-
-  // 3. Check if route is public (no auth required)
-  const isPublicRoute = publicRoutes.some((route) => pathname === route);
-
-  // 4. Check if route is auth route (login/register)
-  const isAuthRoute = authRoutes.includes(pathname);
-
-  // 5. Handle unauthenticated users
-  if (!userInfo) {
-    // Allow access to public and auth routes
-    if (isPublicRoute || isAuthRoute) {
-      return NextResponse.next();
-    }
-
-    // Redirect to login for protected routes
-    return NextResponse.redirect(
-      new URL(`/login?redirectPath=${pathname}`, request.url),
-    );
+  // no token — redirect to login
+  if ((isCustomerRoute || isVendorRoute || isAdminRoute) && !accessToken) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // 6. Redirect authenticated users away from auth routes
-  if (isAuthRoute && userInfo) {
-    // Redirect based on role to their respective dashboards/landing pages
-    if (userInfo.role === "VENDOR") {
-      return NextResponse.redirect(new URL("/vendor", request.url));
-    } else if (userInfo.role === "ADMIN" || userInfo.role === "SUPERADMIN") {
-      return NextResponse.redirect(new URL("/admin", request.url));
-    } else {
-      // Customer or other roles go to homepage or account
-      return NextResponse.redirect(new URL("/account", request.url));
-    }
+  // already logged in — redirect away from auth pages
+  const isAuthPage = ["/login", "/register"].some((r) =>
+    pathname.startsWith(r),
+  );
+
+  if (isAuthPage && accessToken) {
+    return NextResponse.redirect(new URL("/", req.url));
   }
-
-  // 7. Role-based access control for authenticated users
-
-  // Vendor access check
-  if (userInfo.role === "VENDOR") {
-    const allowedRoutes = roleBasedRoutes.VENDOR;
-    const isAuthorized = allowedRoutes.some((pattern) =>
-      pattern.test(pathname),
-    );
-
-    // Vendor can access their own routes only
-    if (isAuthorized) {
-      return NextResponse.next();
-    }
-
-    return NextResponse.redirect(
-      new URL("/vendor?error=Unauthorized Access", request.url),
-    );
-  }
-
-  // Admin and Superadmin access check
-  if (userInfo.role === "ADMIN" || userInfo.role === "SUPERADMIN") {
-    const allowedRoutes = roleBasedRoutes.ADMIN;
-    const isAuthorized = allowedRoutes.some((pattern) =>
-      pattern.test(pathname),
-    );
-
-    if (isAuthorized) {
-      return NextResponse.next();
-    }
-
-    return NextResponse.redirect(
-      new URL("/admin?error=Unauthorized Access", request.url),
-    );
-  }
-
-  // Customer access check
-  if (userInfo.role === "CUSTOMER") {
-    const allowedRoutes = roleBasedRoutes.CUSTOMER;
-    const isAuthorized = allowedRoutes.some((pattern) =>
-      pattern.test(pathname),
-    );
-
-    // Checkout requires authentication (already authenticated)
-    // Additional checkout-specific validation can be added here if needed
-    if (pathname === "/checkout" && isAuthorized) {
-      return NextResponse.next();
-    }
-
-    if (isAuthorized) {
-      return NextResponse.next();
-    }
-
-    return NextResponse.redirect(
-      new URL("/?error=Unauthorized Access", request.url),
-    );
-  }
-
-  // Default: allow access
-  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    "/((?!api|_next|.*\\..*).*)", // required for next-intl
-    "/",
-    "/login",
-    "/register",
-    "/cart",
-    "/checkout",
-    "/account/:path*",
-    "/vendor/:path*",
-    "/admin/:path*",
+    "/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.json|icons).*)",
   ],
 };

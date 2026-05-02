@@ -1,14 +1,12 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 
 type UIState = {
-  locale: "en" | "bn";
   isMobileMenuOpen: boolean;
   isSearchOpen: boolean;
   isCartOpen: boolean;
 };
 
 const initialState: UIState = {
-  locale: "en",
   isMobileMenuOpen: false,
   isSearchOpen: false,
   isCartOpen: false,
@@ -18,9 +16,6 @@ export const uiSlice = createSlice({
   name: "ui",
   initialState,
   reducers: {
-    setLocale: (state, action: PayloadAction<"en" | "bn">) => {
-      state.locale = action.payload;
-    },
     toggleMobileMenu: (state) => {
       state.isMobileMenuOpen = !state.isMobileMenuOpen;
     },
@@ -38,10 +33,5 @@ export const uiSlice = createSlice({
   },
 });
 
-export const {
-  setLocale,
-  toggleMobileMenu,
-  toggleSearch,
-  toggleCart,
-  closeAll,
-} = uiSlice.actions;
+export const { toggleMobileMenu, toggleSearch, toggleCart, closeAll } =
+  uiSlice.actions;

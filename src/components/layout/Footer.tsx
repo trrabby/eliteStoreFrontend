@@ -1,40 +1,37 @@
-import Link           from "next/link";
-import { Logo }       from "@/components/shared/Logo";
-import {
-  Facebook, Instagram, Youtube,
-  MapPin, Phone, Mail,
-} from "lucide-react";
+/* eslint-disable react/no-unescaped-entities */
+import Link from "next/link";
+import { Logo } from "@/components/shared/Logo";
+import { TbBrandFacebook } from "react-icons/tb";
+import { FiYoutube } from "react-icons/fi";
+import { MapPin, Phone, Mail } from "lucide-react";
 
 const FOOTER_LINKS = {
   "Quick Links": [
-    { label: "About Us",      href: "/about"   },
-    { label: "Contact Us",    href: "/contact" },
-    { label: "Track Order",   href: "/track"   },
-    { label: "Become Seller", href: "/vendor"  },
+    { label: "About Us", href: "/about" },
+    { label: "Contact Us", href: "/contact" },
+    { label: "Track Order", href: "/track" },
+    { label: "Become Seller", href: "/vendor" },
   ],
-  "Policies": [
-    { label: "Return Policy",    href: "/return-policy"    },
-    { label: "Privacy Policy",   href: "/privacy-policy"   },
-    { label: "Terms & Conditions", href: "/terms"          },
-    { label: "Shipping Policy",  href: "/shipping-policy"  },
+  Policies: [
+    { label: "Return Policy", href: "/return-policy" },
+    { label: "Privacy Policy", href: "/privacy-policy" },
+    { label: "Terms & Conditions", href: "/terms" },
+    { label: "Shipping Policy", href: "/shipping-policy" },
   ],
   "My Account": [
-    { label: "My Profile",   href: "/account"               },
-    { label: "My Orders",    href: "/account/orders"        },
-    { label: "My Wishlist",  href: "/account/wishlist"      },
-    { label: "My Wallet",    href: "/account/wallet"        },
+    { label: "My Profile", href: "/account" },
+    { label: "My Orders", href: "/account/orders" },
+    { label: "My Wishlist", href: "/account/wishlist" },
+    { label: "My Wallet", href: "/account/wallet" },
   ],
 };
 
 const SOCIAL_LINKS = [
-  { icon: Facebook,  href: "#", label: "Facebook"  },
-  { icon: Instagram, href: "#", label: "Instagram" },
-  { icon: Youtube,   href: "#", label: "YouTube"   },
+  { icon: TbBrandFacebook, href: "#", label: "Facebook" },
+  { icon: FiYoutube, href: "#", label: "YouTube" },
 ];
 
-const PAYMENT_METHODS = [
-  "SSLCommerz", "bKash", "Nagad", "Cash on Delivery",
-];
+const PAYMENT_METHODS = ["SSLCommerz", "bKash", "Nagad", "Cash on Delivery"];
 
 export function Footer() {
   return (
@@ -54,22 +51,22 @@ export function Footer() {
             {/* Contact */}
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2 text-gray-400">
-                <MapPin size={14} className="text-primary flex-shrink-0" />
+                <MapPin size={14} className="text-primary shrink-0" />
                 Dhaka, Bangladesh
               </div>
               <div className="flex items-center gap-2 text-gray-400">
-                <Phone size={14} className="text-primary flex-shrink-0" />
+                <Phone size={14} className="text-primary shrink-0" />
                 +880 1700-000000
               </div>
               <div className="flex items-center gap-2 text-gray-400">
-                <Mail size={14} className="text-primary flex-shrink-0" />
+                <Mail size={14} className="text-primary shrink-0" />
                 support@elitestore.com.bd
               </div>
             </div>
             {/* Social */}
             <div className="flex gap-3 mt-6">
               {SOCIAL_LINKS.map((s) => (
-                
+                <a
                   key={s.label}
                   href={s.href}
                   aria-label={s.label}
@@ -106,8 +103,10 @@ export function Footer() {
 
       {/* Payment methods */}
       <div className="border-t border-gray-800">
-        <div className="container-elite py-4 flex flex-col sm:flex-row
-                        items-center justify-between gap-4">
+        <div
+          className="container-elite py-4 flex flex-col sm:flex-row
+                        items-center justify-between gap-4"
+        >
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <span>Secure payments via:</span>
             {PAYMENT_METHODS.map((m) => (

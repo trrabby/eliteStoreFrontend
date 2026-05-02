@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect } from "react";
-import { io, Socket } from "socket.io-client";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store";
 import {
@@ -10,44 +10,47 @@ import {
   markAllRead,
 } from "@/store/slices/notificationSlice";
 
-let socket: Socket | null = null;
-
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch();
-  const auth = useSelector((s: RootState) => s.auth);
+  const accessToken = useSelector((s: RootState) => s.auth.accessToken);
 
   useEffect(() => {
-    if (!auth.accessToken) return;
+    // guard — only runs in browser
+    if (!accessToken || typeof window === "undefined") return;
 
-    socket = io(process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:5000", {
-      auth: { token: auth.accessToken },
-      reconnection: true,
-    });
+    let socket: any;
 
-    socket.on("connect", () => {
-      socket?.emit("notification:getUnreadCount");
-    });
+    // dynamic import keeps socket.io out of SSR bundle entirely
+    import("socket.io-client").then(({ io }) => {
+      socket = io(
+        process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:5000",
+        {
+          auth: { token: accessToken },
+          reconnection: true,
+        },
+      );
 
-    socket.on("notification:new", (notification) => {
-      dispatch(pushNotification(notification));
-    });
+      socket.on("connect", () => {
+        socket.emit("notification:getUnreadCount");
+      });
 
-    socket.on("notification:unreadCount", ({ count }) => {
-      dispatch(setUnreadCount(count));
-    });
+      socket.on("notification:new", (notification: any) => {
+        dispatch(pushNotification(notification));
+      });
 
-    socket.on("notification:allRead", () => {
-      dispatch(markAllRead());
+      socket.on("notification:unreadCount", ({ count }: { count: number }) => {
+        dispatch(setUnreadCount(count));
+      });
+
+      socket.on("notification:allRead", () => {
+        dispatch(markAllRead());
+      });
     });
 
     return () => {
       socket?.disconnect();
-      socket = null;
     };
-  }, [auth.accessToken, dispatch]);
+  }, [accessToken, dispatch]);
 
   return <>{children}</>;
 }
-
-// export socket for use in other components
-export const getSocket = () => socket;

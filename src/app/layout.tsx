@@ -1,33 +1,42 @@
 import type { Metadata } from "next";
 import { Playfair_Display, DM_Sans, Hind_Siliguri } from "next/font/google";
-import { NextIntlClientProvider } from "next-intl";
 import { ReduxProvider } from "@/components/providers/ReduxProvider";
+import { FlyToCartProvider } from "@/components/shared/FlyToCart";
+import { Toaster } from "sonner";
 import "./globals.css";
-import { getLocale, getMessages } from "next-intl/server";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
   weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
   variable: "--font-dm-sans",
   weight: ["300", "400", "500", "600"],
+  display: "swap",
 });
 
 const hindSiliguri = Hind_Siliguri({
   subsets: ["bengali", "latin"],
   variable: "--font-hind-siliguri",
   weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: { default: "Elite Store", template: "%s | Elite Store" },
   description:
     "Feel the elegance — Bangladesh's premium online shopping destination",
-  keywords: ["online shopping", "Bangladesh", "fashion", "elite store"],
+  keywords: [
+    "online shopping",
+    "Bangladesh",
+    "fashion",
+    "elite store",
+    "ইলিট স্টোর",
+  ],
   authors: [{ name: "Elite Store" }],
   openGraph: {
     type: "website",
@@ -37,10 +46,6 @@ export const metadata: Metadata = {
     title: "Elite Store — Feel the elegance",
     description: "Bangladesh's premium online shopping destination",
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "Elite Store",
-  },
 };
 
 export default async function RootLayout({
@@ -48,18 +53,32 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const locale = await getLocale();
-  const messages = await getMessages();
-
   return (
     <html
-      lang={locale}
-      className={`${playfair.variable} ${dmSans.variable} ${hindSiliguri.variable}`}
+      lang={"en"}
+      className={`
+        ${playfair.variable}
+        ${dmSans.variable}
+        ${hindSiliguri.variable}
+      `}
     >
       <body className="font-body bg-white text-gray-900 antialiased">
-        <NextIntlClientProvider messages={messages}>
-          <ReduxProvider>{children}</ReduxProvider>
-        </NextIntlClientProvider>
+        <ReduxProvider>
+          <FlyToCartProvider>
+            {children}
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                style: {
+                  background: "#fff",
+                  border: "1px solid #FFEDFA",
+                  borderRadius: "14px",
+                  color: "#171717",
+                },
+              }}
+            />
+          </FlyToCartProvider>
+        </ReduxProvider>
       </body>
     </html>
   );

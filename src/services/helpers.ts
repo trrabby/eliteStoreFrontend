@@ -108,7 +108,9 @@ export const fetchPublic = async (
 // Helpers
 // ─────────────────────────────────────────
 
-export const buildQuery = (params: Record<string, any>): string => {
+export const buildQuery = async (
+  params: Record<string, any>,
+): Promise<string> => {
   const filtered = Object.entries(params)
     .filter(([, v]) => v !== undefined && v !== null && v !== "")
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
