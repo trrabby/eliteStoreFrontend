@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
-import { fetchWithAuth, fetchPublic, buildQuery } from "./helpers";
+import { buildQuery } from "@/lib/utils/buildQuery";
+import { fetchWithAuth, fetchPublic } from "./helpers";
 
 // get all products — public, SSR (no cache — price/stock dynamic)
 export const getAllProducts = async (params: {

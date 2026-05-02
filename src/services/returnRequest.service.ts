@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
-import { fetchWithAuth, buildQuery } from "./helpers";
+import { buildQuery } from "@/lib/utils/buildQuery";
+import { fetchWithAuth } from "./helpers";
 
 // submit return request — customer
 export const createReturnRequest = async (formData: FormData) => {

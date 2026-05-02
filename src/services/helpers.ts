@@ -103,16 +103,3 @@ export const fetchPublic = async (
 
   return res.json();
 };
-
-// ─────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────
-
-export const buildQuery = async (
-  params: Record<string, any>,
-): Promise<string> => {
-  const filtered = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== "")
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
-  return filtered.length ? `?${filtered.join("&")}` : "";
-};

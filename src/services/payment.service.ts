@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
-import { fetchWithAuth, buildQuery } from "./helpers";
+import { buildQuery } from "@/lib/utils/buildQuery";
+import { fetchWithAuth } from "./helpers";
 
 // initiate payment
 export const initiatePayment = async (formData: FormData) => {

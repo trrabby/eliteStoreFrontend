@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
-import { fetchWithAuth, fetchPublic, buildQuery } from "./helpers";
+import { buildQuery } from "@/lib/utils/buildQuery";
+import { fetchWithAuth, fetchPublic } from "./helpers";
 
 // track by tracking number — public
 export const trackByTrackingNumber = async (trackingNumber: string) => {

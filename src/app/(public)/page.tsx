@@ -85,7 +85,7 @@ async function NewArrivalsSection() {
 
 async function FlashSaleSection() {
   const res = await getAllProducts({
-    sortBy: "popular",
+    sortBy: "totalSold",
     limit: 10,
     status: "ACTIVE",
   });

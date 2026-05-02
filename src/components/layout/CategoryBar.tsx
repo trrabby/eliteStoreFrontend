@@ -31,7 +31,7 @@ export function CategoryBar({ categories }: CategoryBarProps) {
   if (!categories?.length) return null;
 
   return (
-    <div className="bg-white border-b border-gray-100 sticky top-16 z-40">
+    <div className="bg-white border-b border-gray-100 sticky top-24 z-40">
       <div className="container-elite">
         <div className="relative flex items-center">
           {/* Left scroll button */}

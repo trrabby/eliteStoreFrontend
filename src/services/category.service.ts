@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
-import { fetchWithAuth, fetchPublic, buildQuery } from "./helpers";
+import { buildQuery } from "@/lib/utils/buildQuery";
+import { fetchWithAuth, fetchPublic } from "./helpers";
 
 // get full category tree — public, SSG (revalidate 10min)
 export const getCategoryTree = async () => {
