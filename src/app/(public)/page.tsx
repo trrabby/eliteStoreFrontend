@@ -21,17 +21,13 @@ export const metadata: Metadata = {
     "Bangladesh's premium online shopping destination for fashion, beauty, and lifestyle.",
 };
 
-// ISR — revalidate every 5 minutes
 export const revalidate = 300;
 
-// ─── Skeleton fallbacks ───────────────────
+// ─── Skeleton ────────────────────────────
 
 function ProductGridSkeleton() {
   return (
-    <div
-      className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4
-                    xl:grid-cols-5 gap-3 md:gap-4"
-    >
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
       {Array.from({ length: 10 }).map((_, i) => (
         <ProductCardSkeleton key={i} />
       ))}
@@ -39,11 +35,10 @@ function ProductGridSkeleton() {
   );
 }
 
-// ─── Async data sections ─────────────────
-// Each is its own async server component so they load independently
+// ─── Sections ────────────────────────────
 
 async function HeroSection() {
-  return <HeroBanner />; // static slides
+  return <HeroBanner />;
 }
 
 async function CategoriesSection() {
@@ -51,6 +46,7 @@ async function CategoriesSection() {
   const rootCategories = (res?.data ?? [])
     .filter((c: any) => c.depth === 0)
     .slice(0, 20);
+
   return <CategoryScroll categories={rootCategories} />;
 }
 
@@ -60,7 +56,6 @@ async function FeaturedSection() {
     getAllProducts({ sortBy: "newest", limit: 10, status: "ACTIVE" }),
     getAllProducts({ sortBy: "popular", limit: 10, status: "ACTIVE" }),
     getAllProducts({ sortBy: "newest", limit: 10, status: "ACTIVE" }),
-    // sale: you can add a discount filter when your API supports it
   ]);
 
   return (
@@ -84,6 +79,7 @@ async function NewArrivalsSection() {
     limit: 12,
     status: "ACTIVE",
   });
+
   return <NewArrivals products={res?.data?.products ?? []} />;
 }
 
@@ -93,35 +89,35 @@ async function FlashSaleSection() {
     limit: 10,
     status: "ACTIVE",
   });
+
   return <FlashSale products={res?.data?.products ?? []} />;
 }
 
-// ─── Home Page ────────────────────────────
+// ─── Page ────────────────────────────────
 
 export default async function HomePage() {
   return (
-    <div className="min-h-screen">
-      {/* Hero — full width, above fold */}
+    <div className="min-h-screen bg-brand-50">
+      {/* Hero */}
       <Suspense
         fallback={
-          <div className="h-[520px] md:h-[600px] lg:h-[680px] skeleton" />
+          <div className="h-[520px] md:h-[600px] lg:h-[680px] bg-brand-100 animate-pulse" />
         }
       >
         <HeroSection />
       </Suspense>
 
-      {/* Trust badges */}
       <TrustBadges />
 
-      {/* Categories scroll */}
+      {/* Categories */}
       <Suspense
         fallback={
-          <div className="h-36 container-elite">
+          <div className="h-36 px-4 md:px-6 lg:px-8">
             <div className="flex gap-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="flex flex-col items-center gap-2">
-                  <div className="skeleton w-20 h-20 rounded-full" />
-                  <div className="skeleton h-3 w-16 rounded-full" />
+                  <div className="w-20 h-20 rounded-full bg-brand-100 animate-pulse" />
+                  <div className="h-3 w-16 rounded-full bg-brand-100 animate-pulse" />
                 </div>
               ))}
             </div>
@@ -131,14 +127,13 @@ export default async function HomePage() {
         <CategoriesSection />
       </Suspense>
 
-      {/* Promo banners — static, no data needed */}
       <PromoBanners />
 
-      {/* Featured products with tabs */}
+      {/* Featured */}
       <Suspense
         fallback={
-          <section className="container-elite py-10">
-            <div className="skeleton h-8 w-40 rounded-xl mb-6" />
+          <section className="px-4 md:px-6 lg:px-8 py-10">
+            <div className="h-8 w-40 bg-brand-100 rounded-xl mb-6 animate-pulse" />
             <ProductGridSkeleton />
           </section>
         }
@@ -146,15 +141,18 @@ export default async function HomePage() {
         <FeaturedSection />
       </Suspense>
 
-      {/* Top brands */}
+      {/* Brands */}
       <Suspense
         fallback={
-          <section className="py-12 bg-gradient-pale">
-            <div className="container-elite">
-              <div className="skeleton h-8 w-36 rounded-xl mx-auto mb-8" />
+          <section className="py-12 bg-brand-100">
+            <div className="px-4 md:px-6 lg:px-8">
+              <div className="h-8 w-36 bg-brand-200 rounded-xl mx-auto mb-8 animate-pulse" />
               <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="skeleton aspect-square rounded-2xl" />
+                  <div
+                    key={i}
+                    className="aspect-square rounded-2xl bg-brand-200 animate-pulse"
+                  />
                 ))}
               </div>
             </div>
@@ -167,8 +165,8 @@ export default async function HomePage() {
       {/* Flash sale */}
       <Suspense
         fallback={
-          <section className="container-elite py-10">
-            <div className="skeleton h-8 w-40 rounded-xl mb-6" />
+          <section className="px-4 md:px-6 lg:px-8 py-10">
+            <div className="h-8 w-40 bg-brand-100 rounded-xl mb-6 animate-pulse" />
             <div className="flex gap-3 overflow-hidden">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="flex-[0_0_200px]">
@@ -182,14 +180,13 @@ export default async function HomePage() {
         <FlashSaleSection />
       </Suspense>
 
-      {/* Price range cards */}
       <PriceRangeCards />
 
       {/* New arrivals */}
       <Suspense
         fallback={
-          <section className="container-elite py-10">
-            <div className="skeleton h-8 w-48 rounded-xl mb-6" />
+          <section className="px-4 md:px-6 lg:px-8 py-10">
+            <div className="h-8 w-48 bg-brand-100 rounded-xl mb-6 animate-pulse" />
             <div className="flex gap-3 overflow-hidden">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="flex-[0_0_200px]">
@@ -203,7 +200,6 @@ export default async function HomePage() {
         <NewArrivalsSection />
       </Suspense>
 
-      {/* Bottom spacing for mobile nav */}
       <div className="h-8" />
     </div>
   );

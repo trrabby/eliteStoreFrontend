@@ -36,25 +36,18 @@ export function Header() {
 
   return (
     <>
-      <header
-        className="sticky top-0 z-50 bg-white shadow-sm border-b
-                         border-gray-100"
-      >
+      <header className="sticky top-0 z-50 bg-brand-50 border-b border-brand-100 shadow-sm">
         {/* Promo bar */}
-        <div
-          className="bg-gradient-primary text-white text-xs
-                        text-center py-2 font-medium tracking-wide"
-        >
+        <div className="bg-primary text-white text-xs text-center py-2 font-medium tracking-wide">
           🎉 Free delivery on orders above ৳1000 &nbsp;|&nbsp; Cash on Delivery
           available
         </div>
 
         {/* Main header */}
-        <div className="container-elite h-16 flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-4">
           {/* Mobile menu toggle */}
           <button
-            className="lg:hidden p-2 text-gray-600 hover:text-primary
-                       transition-colors"
+            className="lg:hidden p-2 text-brand-600 hover:text-primary transition-colors"
             onClick={() => dispatch(toggleMobileMenu())}
             aria-label="Open menu"
           >
@@ -62,8 +55,8 @@ export function Header() {
           </button>
 
           {/* Logo */}
-          <Link href="/" className="shrink-0">
-            <Logo />
+          <Link href="/" className="flex items-center" aria-label="Elite Store">
+            <Logo size="lg" />
           </Link>
 
           {/* Search bar — desktop */}
@@ -75,8 +68,7 @@ export function Header() {
           <div className="flex items-center gap-1 ml-auto">
             {/* Search — mobile */}
             <button
-              className="lg:hidden p-2 text-gray-600 hover:text-primary
-                         transition-colors"
+              className="lg:hidden p-2 text-brand-600 hover:text-primary transition-colors"
               onClick={() => dispatch(toggleSearch())}
               aria-label="Search"
             >
@@ -89,8 +81,7 @@ export function Header() {
             {/* Wishlist */}
             <Link
               href="/account/wishlist"
-              className="p-2 text-gray-600 hover:text-primary
-                         transition-colors"
+              className="p-2 text-brand-600 hover:text-primary transition-colors"
               aria-label="Wishlist"
             >
               <Heart size={20} />
@@ -98,12 +89,12 @@ export function Header() {
 
             {/* Cart */}
             <button
-              className="p-2 text-gray-600 hover:text-primary
-                         transition-colors relative"
+              className="p-2 text-brand-600 hover:text-primary transition-colors relative"
               onClick={() => dispatch(toggleCart())}
               aria-label="Cart"
             >
               <ShoppingBag size={20} />
+
               <AnimatePresence>
                 {totalItems > 0 && (
                   <motion.span
@@ -134,15 +125,10 @@ export function Header() {
                     alt={user.firstName}
                     height={10}
                     width={10}
-                    className="w-8 h-8 rounded-full object-cover
-                               border-2 border-primary-pale"
+                    className="w-8 h-8 rounded-full object-cover border-2 border-primary-light"
                   />
                 ) : (
-                  <div
-                    className="w-8 h-8 rounded-full bg-gradient-primary
-                                  flex items-center justify-center
-                                  text-white text-xs font-bold"
-                  >
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
                     {user?.firstName?.[0]}
                     {user?.lastName?.[0]}
                   </div>
@@ -151,8 +137,9 @@ export function Header() {
             ) : (
               <Link
                 href="/login"
-                className="hidden sm:flex items-center gap-2
-                           btn-secondary text-sm px-4 py-2"
+                className="hidden sm:flex items-center gap-2 text-sm px-4 py-2
+                           border border-primary text-primary rounded-md
+                           hover:bg-primary hover:text-white transition"
               >
                 <User size={16} />
                 Login
@@ -173,14 +160,14 @@ export function Header() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className="lg:hidden fixed top-0 left-0 right-0 z-50
-                       bg-white p-4 shadow-lg border-b border-gray-100"
+                       bg-brand-50 p-4 shadow-lg border-b border-brand-100"
           >
             <div className="flex items-center gap-3">
               <SearchBar autoFocus />
+
               <button
                 onClick={() => dispatch(toggleSearch())}
-                className="p-2 text-gray-400 hover:text-gray-900
-                           shrink-0"
+                className="p-2 text-brand-400 hover:text-brand-700 shrink-0 transition"
               >
                 <X size={20} />
               </button>

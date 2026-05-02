@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 export function Logo({ size = "default" }: { size?: "sm" | "default" | "lg" }) {
   const sizes = {
     sm: "text-lg",

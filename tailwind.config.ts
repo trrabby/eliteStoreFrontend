@@ -1,11 +1,11 @@
 import type { Config } from "tailwindcss";
-import tailwindcssAnimate from "tailwindcss-animate";
 
 const config: Config = {
-  darkMode: "class",
+  darkMode: ["class"],
   content: [
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
@@ -29,32 +29,27 @@ const config: Config = {
           900: "#7A0040",
         },
       },
-
       fontFamily: {
         display: ["var(--font-playfair)", "serif"],
         body: ["var(--font-dm-sans)", "sans-serif"],
         bengali: ["var(--font-hind-siliguri)", "sans-serif"],
       },
-
       backgroundImage: {
         "gradient-primary": "linear-gradient(135deg, #FF3E9B 0%, #FF88BA 100%)",
         "gradient-pale": "linear-gradient(135deg, #FFEDFA 0%, #FFF5FB 100%)",
         "gradient-hero":
           "linear-gradient(135deg, #FF3E9B 0%, #FF88BA 50%, #FFEDFA 100%)",
       },
-
       boxShadow: {
         pink: "0 4px 24px rgba(255, 62, 155, 0.15)",
         "pink-lg": "0 8px 40px rgba(255, 62, 155, 0.25)",
         card: "0 2px 16px rgba(0, 0, 0, 0.06)",
       },
-
       animation: {
         "slide-in": "slideIn 0.3s ease-out",
         "fade-in": "fadeIn 0.2s ease-out",
         "bounce-in": "bounceIn 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55)",
       },
-
       keyframes: {
         slideIn: {
           "0%": { transform: "translateY(-10px)", opacity: "0" },
@@ -71,8 +66,7 @@ const config: Config = {
       },
     },
   },
-
-  plugins: [tailwindcssAnimate],
+  plugins: [require("tailwindcss-animate")],
 };
 
 export default config;
