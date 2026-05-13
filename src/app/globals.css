@@ -151,6 +151,20 @@ h3 {
   font-weight: 600;
   color: rgb(17 24 39);
 }
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  33% {
+    transform: translate(10px, -15px) rotate(3deg);
+  }
+  66% {
+    transform: translate(-8px, 8px) rotate(-2deg);
+  }
+}
+
 @media (min-width: 768px) {
   .section-title {
     font-size: 1.875rem;

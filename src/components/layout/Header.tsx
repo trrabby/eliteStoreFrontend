@@ -16,16 +16,16 @@ import { NotificationBell } from "@/components/shared/NotificationBell";
 import { SearchBar } from "@/components/shared/SearchBar";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/lib/hooks/useAuth";
 import { CartDrawer } from "../cart/CartDrawer";
 import Image from "next/image";
+import { IUser } from "@/store/slices/authSlice";
 
 export function Header() {
   const dispatch = useDispatch();
   const pathname = usePathname();
   const cart = useSelector((s: RootState) => s.cart);
   const ui = useSelector((s: RootState) => s.ui);
-  const { user, isLoggedIn } = useAuth();
+  const user = useSelector((s: RootState) => s.auth.user) as IUser | null;
 
   const totalItems = cart.items.reduce((sum, i) => sum + i.quantity, 0);
 
@@ -76,7 +76,7 @@ export function Header() {
             </button>
 
             {/* Notifications */}
-            {isLoggedIn && <NotificationBell />}
+            {user && <NotificationBell />}
 
             {/* Wishlist */}
             <Link
@@ -113,24 +113,24 @@ export function Header() {
             </button>
 
             {/* Account */}
-            {isLoggedIn ? (
+            {user ? (
               <Link
                 href="/account"
                 className="hidden sm:flex items-center gap-2 p-1"
                 aria-label="Account"
               >
-                {user?.avatar ? (
+                {user?.accountInfo?.avatar ? (
                   <Image
-                    src={user.avatar}
-                    alt={user.firstName}
+                    src={user?.accountInfo?.avatar}
+                    alt={user?.accountInfo?.firstName}
                     height={10}
                     width={10}
                     className="w-8 h-8 rounded-full object-cover border-2 border-primary-light"
                   />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
-                    {user?.firstName?.[0]}
-                    {user?.lastName?.[0]}
+                    {user?.accountInfo?.firstName}
+                    {user?.accountInfo?.lastName}
                   </div>
                 )}
               </Link>

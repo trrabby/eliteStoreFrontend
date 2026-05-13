@@ -7,21 +7,6 @@ import { config } from "@/config";
 import { FieldValues } from "react-hook-form";
 import { fetchWithAuth } from "./helpers";
 
-// register
-export const registerUser = async (userData: FieldValues) => {
-  try {
-    const res = await fetch(`${config().Backend_URL}/users/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(userData),
-      cache: "no-store",
-    });
-    return res.json();
-  } catch (error: any) {
-    return Error(error);
-  }
-};
-
 // login
 export const loginUser = async (userData: FieldValues) => {
   try {
@@ -40,13 +25,12 @@ export const loginUser = async (userData: FieldValues) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 60 * 60 * 24, // 1 day
       });
+
       cookieStore.set("refreshToken", result.data.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 60 * 60 * 24 * 30, // 30 days
       });
     }
 
@@ -202,5 +186,15 @@ export const changePassword = async (userData: FieldValues) => {
     });
   } catch (error: any) {
     return Error(error);
+  }
+};
+
+// get raw access token from cookie — for client-side hydration
+export const getAccessToken = async (): Promise<string | null> => {
+  try {
+    const cookieStore = await cookies();
+    return cookieStore.get("accessToken")?.value ?? null;
+  } catch {
+    return null;
   }
 };

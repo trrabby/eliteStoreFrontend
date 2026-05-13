@@ -1,54 +1,94 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { RootState } from "..";
 
-type User = {
-  publicId: string;
-  email: string;
-  role: string;
+export type UserRole = "SUPER_ADMIN" | "ADMIN" | "USER" | "VENDOR";
+
+export interface IAccountInfo {
   firstName: string;
   lastName: string;
-  avatar?: string;
-  isEmailVerified: boolean;
-};
+  displayName: string | null;
+  avatar: string | null;
+}
 
-type AuthState = {
-  user: User | null;
-  accessToken: string | null;
-  isLoading: boolean;
-};
+export interface IAddress {
+  id: number;
+  fullName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city_district: string;
+  postalCode: string;
+  country: string;
+  landmark: string | null;
+  latitude: string | null;
+  longitude: string | null;
+}
+
+export interface IUser {
+  id: number;
+  publicId: string;
+
+  email: string;
+  phone: string;
+
+  role: UserRole;
+
+  isEmailVerified: boolean;
+  isPhoneVerified: boolean;
+
+  lastLoginAt: string | null;
+  createdAt: string;
+
+  accountInfo: IAccountInfo | null;
+
+  defaultAddress: IAddress | null;
+
+  notificationCount: number;
+}
+
+interface AuthState {
+  user: IUser | null;
+}
 
 const initialState: AuthState = {
   user: null,
-  accessToken: null,
-  isLoading: true,
 };
 
-export const authSlice = createSlice({
+const authSlice = createSlice({
   name: "auth",
+
   initialState,
+
   reducers: {
-    setCredentials: (
+    setUser: (
       state,
-      action: PayloadAction<{ user: User; accessToken: string }>,
+      action: PayloadAction<{
+        user: IUser;
+      }>,
     ) => {
       state.user = action.payload.user;
-      state.accessToken = action.payload.accessToken;
-      state.isLoading = false;
     },
-    clearCredentials: (state) => {
+
+    updateNotificationCount: (state, action: PayloadAction<number>) => {
+      if (state.user) {
+        state.user.notificationCount = action.payload;
+      }
+    },
+
+    logout: (state) => {
       state.user = null;
-      state.accessToken = null;
-      state.isLoading = false;
-    },
-    setLoading: (state, action: PayloadAction<boolean>) => {
-      state.isLoading = action.payload;
     },
   },
 });
 
-// export current user
-export const selectCurrentUser = (state: { auth: AuthState }) =>
-  state.auth.user;
-export const selectAccessToken = (state: { auth: AuthState }) =>
-  state.auth.accessToken;
-export const { setCredentials, clearCredentials, setLoading } =
-  authSlice.actions;
+export const { setUser, updateNotificationCount, logout } = authSlice.actions;
+
+export default authSlice.reducer;
+
+// Selectors
+export const selectCurrentUser = (state: RootState) => state.auth.user;
+
+export const selectUserRole = (state: RootState) => state.auth.user?.role;
+
+export const selectNotificationCount = (state: RootState) =>
+  state.auth.user?.notificationCount ?? 0;

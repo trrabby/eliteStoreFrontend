@@ -3,6 +3,7 @@ import { Playfair_Display, DM_Sans, Hind_Siliguri } from "next/font/google";
 import { ReduxProvider } from "@/components/providers/ReduxProvider";
 import { FlyToCartProvider } from "@/components/shared/FlyToCart";
 import { Toaster } from "sonner";
+import { getServerSideUser } from "@/services/profile.service";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -30,14 +31,6 @@ export const metadata: Metadata = {
   title: { default: "Elite Store", template: "%s | Elite Store" },
   description:
     "Feel the elegance — Bangladesh's premium online shopping destination",
-  keywords: [
-    "online shopping",
-    "Bangladesh",
-    "fashion",
-    "elite store",
-    "ইলিট স্টোর",
-  ],
-  authors: [{ name: "Elite Store" }],
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -53,9 +46,12 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // fetch user server-side — zero flicker on first paint
+  const auth = await getServerSideUser();
+
   return (
     <html
-      lang={"en"}
+      lang="en"
       className={`
         ${playfair.variable}
         ${dmSans.variable}
@@ -64,6 +60,11 @@ export default async function RootLayout({
     >
       <body className="font-body bg-white text-gray-900 antialiased">
         <ReduxProvider>
+          {/*
+            AuthProvider receives decoded user from server
+            and populates Redux before first render —
+            no loading flash, no hydration mismatch
+          */}
           <FlyToCartProvider>
             {children}
             <Toaster

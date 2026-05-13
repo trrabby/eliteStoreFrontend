@@ -28,9 +28,12 @@ export const notificationSlice = createSlice({
   reducers: {
     setNotifications: (
       state,
-      action: PayloadAction<{ items: Notification[]; unreadCount: number }>,
+      action: PayloadAction<{
+        notifications: Notification[];
+        unreadCount: number;
+      }>,
     ) => {
-      state.items = action.payload.items;
+      state.items = action.payload.notifications;
       state.unreadCount = action.payload.unreadCount;
     },
     pushNotification: (state, action: PayloadAction<Notification>) => {

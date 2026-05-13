@@ -14,6 +14,7 @@ import { NewArrivals } from "@/components/home/NewArrivals";
 import { FlashSale } from "@/components/home/FlashSale";
 import { ProductCardSkeleton } from "@/components/product/ProductCardSkeleton";
 import type { Metadata } from "next";
+import { getActiveFlashSales } from "@/services/flashSale.service";
 
 export const metadata: Metadata = {
   title: "Elite Store — Feel the elegance",
@@ -84,13 +85,13 @@ async function NewArrivalsSection() {
 }
 
 async function FlashSaleSection() {
-  const res = await getAllProducts({
-    sortBy: "totalSold",
-    limit: 10,
-    status: "ACTIVE",
-  });
+  const res = await getActiveFlashSales();
 
-  return <FlashSale products={res?.data?.products ?? []} />;
+  const flashSales = res?.data ?? [];
+
+  if (!flashSales.length) return null;
+
+  return <FlashSale flashSales={flashSales} />;
 }
 
 // ─── Page ────────────────────────────────
@@ -101,7 +102,7 @@ export default async function HomePage() {
       {/* Hero */}
       <Suspense
         fallback={
-          <div className="h-[520px] md:h-[600px] lg:h-[680px] bg-brand-100 animate-pulse" />
+          <div className="h-130 md:h-150 lg:h-170 bg-brand-100 animate-pulse" />
         }
       >
         <HeroSection />

@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { configureStore } from "@reduxjs/toolkit";
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
+
 import {
   persistReducer,
   persistStore,
@@ -9,18 +9,23 @@ import {
   PERSIST,
   PURGE,
   REGISTER,
+  PersistConfig,
 } from "redux-persist";
+
 import storage from "./storage";
 
-// Slices
-import { authSlice } from "./slices/authSlice";
+// reducers
+import authReducer from "./slices/authSlice";
 import { cartSlice } from "./slices/cartSlice";
 import { wishlistSlice } from "./slices/wishlistSlice";
 import { notificationSlice } from "./slices/notificationSlice";
 import { uiSlice } from "./slices/uiSlice";
 
-// Persist configs
-const authPersistConfig = {
+// ========================
+// Persist Configs
+// ========================
+
+const authPersistConfig: PersistConfig<ReturnType<typeof authReducer>> = {
   key: "auth",
   storage,
 };
@@ -37,45 +42,63 @@ const wishlistPersistConfig = {
   whitelist: ["items"],
 };
 
-const persistedAuth = persistReducer(authPersistConfig, authSlice.reducer);
-const persistedCart = persistReducer(cartPersistConfig, cartSlice.reducer);
-const persistedWishlist = persistReducer(
+// ========================
+// Persisted Reducers
+// ========================
+
+const persistedAuthReducer = persistReducer(authPersistConfig, authReducer);
+
+const persistedCartReducer = persistReducer(
+  cartPersistConfig,
+  cartSlice.reducer,
+);
+
+const persistedWishlistReducer = persistReducer(
   wishlistPersistConfig,
   wishlistSlice.reducer,
 );
 
-export const makeStore = () => {
-  return configureStore({
-    reducer: {
-      auth: persistedAuth,
-      cart: persistedCart,
-      wishlist: persistedWishlist,
-      notification: notificationSlice.reducer,
-      ui: uiSlice.reducer,
-    },
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware({
-        serializableCheck: {
-          ignoredActions: [
-            FLUSH,
-            REHYDRATE,
-            PAUSE,
-            PERSIST,
-            PURGE,
-            REGISTER,
-            "notification/pushNotification",
-          ],
-        },
-      }),
-  });
-};
+// ========================
+// Root Reducer
+// ========================
 
-// Infer the type of makeStore
-export type AppStore = ReturnType<typeof makeStore>;
-// Infer the `RootState` and `AppDispatch` types from the store itself
-export type RootState = ReturnType<AppStore["getState"]>;
-export type AppDispatch = AppStore["dispatch"];
+const rootReducer = combineReducers({
+  auth: persistedAuthReducer,
+  cart: persistedCartReducer,
+  wishlist: persistedWishlistReducer,
+  notification: notificationSlice.reducer,
+  ui: uiSlice.reducer,
+});
 
-// Create and export persistor
-export const store = makeStore();
+// ========================
+// Store
+// ========================
+
+export const store = configureStore({
+  reducer: rootReducer,
+
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: [
+          FLUSH,
+          REHYDRATE,
+          PAUSE,
+          PERSIST,
+          PURGE,
+          REGISTER,
+          "notification/pushNotification",
+        ],
+      },
+    }),
+});
+
 export const persistor = persistStore(store);
+
+// ========================
+// Types
+// ========================
+
+export type RootState = ReturnType<typeof store.getState>;
+
+export type AppDispatch = typeof store.dispatch;
