@@ -94,8 +94,12 @@ export default function LoginPage() {
       // hydrate redux
       dispatch(setUser({ user: reduxUser }));
       dispatch(setCart(cartInfo));
-      dispatch(setWishlist(wishlist.data));
       dispatch(setNotifications(notifications.data));
+
+      const productIds = (wishlist.data?.items ?? []).map(
+        (item: any) => item.productId,
+      );
+      dispatch(setWishlist(productIds));
 
       toast.success("Welcome back 👋");
 

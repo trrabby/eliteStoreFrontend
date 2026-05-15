@@ -39,7 +39,7 @@ const cartPersistConfig = {
 const wishlistPersistConfig = {
   key: "wishlist",
   storage,
-  whitelist: ["items"],
+  whitelist: ["productIds"],
 };
 
 // ========================

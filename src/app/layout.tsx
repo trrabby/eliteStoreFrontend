@@ -3,7 +3,6 @@ import { Playfair_Display, DM_Sans, Hind_Siliguri } from "next/font/google";
 import { ReduxProvider } from "@/components/providers/ReduxProvider";
 import { FlyToCartProvider } from "@/components/shared/FlyToCart";
 import { Toaster } from "sonner";
-import { getServerSideUser } from "@/services/profile.service";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -12,14 +11,12 @@ const playfair = Playfair_Display({
   weight: ["400", "500", "600", "700"],
   display: "swap",
 });
-
 const dmSans = DM_Sans({
   subsets: ["latin"],
   variable: "--font-dm-sans",
   weight: ["300", "400", "500", "600"],
   display: "swap",
 });
-
 const hindSiliguri = Hind_Siliguri({
   subsets: ["bengali", "latin"],
   variable: "--font-hind-siliguri",
@@ -36,35 +33,21 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://elitestore.com.bd",
     siteName: "Elite Store",
-    title: "Elite Store — Feel the elegance",
-    description: "Bangladesh's premium online shopping destination",
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // fetch user server-side — zero flicker on first paint
-  const auth = await getServerSideUser();
-
   return (
     <html
       lang="en"
-      className={`
-        ${playfair.variable}
-        ${dmSans.variable}
-        ${hindSiliguri.variable}
-      `}
+      className={`${playfair.variable} ${dmSans.variable} ${hindSiliguri.variable}`}
     >
       <body className="font-body bg-white text-gray-900 antialiased">
         <ReduxProvider>
-          {/*
-            AuthProvider receives decoded user from server
-            and populates Redux before first render —
-            no loading flash, no hydration mismatch
-          */}
           <FlyToCartProvider>
             {children}
             <Toaster

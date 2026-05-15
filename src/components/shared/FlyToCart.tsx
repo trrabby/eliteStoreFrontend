@@ -107,8 +107,9 @@ function FlyingItem({ item }: { item: FlyItem }) {
       <Image
         src={item.src}
         alt=""
-        fill
-        className="w-[60px] h-[60px] rounded-xl object-cover
+        height={50}
+        width={50}
+        className="w-15 h-15 rounded-xl object-cover
                    shadow-pink border-2 border-white"
       />
     </motion.div>
