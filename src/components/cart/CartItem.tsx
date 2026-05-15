@@ -6,25 +6,66 @@ import { motion } from "framer-motion";
 import { useCart } from "@/lib/hooks/useCart";
 import { formatBDT } from "@/lib/utils/currency";
 
+type CartVariant = {
+  id: number;
+  name: string;
+  sku: string;
+  price: string | number;
+  comparePrice: string | number | null;
+  stock: number;
+  isActive: boolean;
+};
+
+type CartProduct = {
+  id: number;
+  name: string;
+  slug: string;
+  status: string;
+  publicId: string;
+  images: {
+    url: string;
+    altText: string;
+  }[];
+};
+
+type CartItem = {
+  id: number;
+  cartId: number;
+  productId: number;
+  variantId: number;
+  quantity: number;
+  addedAt: string;
+  product: CartProduct;
+  variant: CartVariant;
+};
+
 type CartItemProps = {
-  item: {
-    variantId: number;
-    productName: string;
-    variantName: string;
-    sku: string;
-    price: number;
-    comparePrice: number | null;
-    image: string;
-    quantity: number;
-    stock: number;
-  };
+  item: CartItem;
 };
 
 export function CartItem({ item }: CartItemProps) {
   const { removeFromCart, updateQty } = useCart();
 
-  const canIncrease = item.quantity < item.stock;
+  // Helper to get numeric price
+  const getPrice = (price: string | number): number => {
+    return typeof price === "string" ? parseFloat(price) : price;
+  };
+
+  const currentPrice = getPrice(item.variant.price);
+  const comparePriceValue = item.variant.comparePrice
+    ? getPrice(item.variant.comparePrice)
+    : null;
+
+  const canIncrease = item.quantity < item.variant.stock;
   const canDecrease = item.quantity > 1;
+
+  const handleUpdateQuantity = (newQuantity: number) => {
+    updateQty(item.variantId, newQuantity);
+  };
+
+  const handleRemove = () => {
+    removeFromCart(item.variantId);
+  };
 
   return (
     <motion.div
@@ -40,8 +81,8 @@ export function CartItem({ item }: CartItemProps) {
                       shrink-0 bg-primary-pale"
       >
         <Image
-          src={item.image || "/placeholder.png"}
-          alt={item.productName}
+          src={item.product.images[0]?.url || "/placeholder.png"}
+          alt={item.product.name}
           fill
           className="object-cover"
           sizes="80px"
@@ -51,20 +92,20 @@ export function CartItem({ item }: CartItemProps) {
       {/* Details */}
       <div className="flex-1 min-w-0">
         <h4 className="text-sm font-semibold text-gray-900 line-clamp-1">
-          {item.productName}
+          {item.product.name}
         </h4>
-        {item.variantName && (
-          <p className="text-xs text-gray-500 mt-0.5">{item.variantName}</p>
+        {item.variant.name && (
+          <p className="text-xs text-gray-500 mt-0.5">{item.variant.name}</p>
         )}
 
         {/* Price */}
         <div className="flex items-center gap-2 mt-1.5">
           <span className="text-sm font-bold text-primary">
-            {formatBDT(item.price * item.quantity)}
+            {formatBDT(currentPrice * item.quantity)}
           </span>
-          {item.comparePrice && item.comparePrice > item.price && (
+          {comparePriceValue && comparePriceValue > currentPrice && (
             <span className="text-xs text-gray-400 line-through">
-              {formatBDT(item.comparePrice * item.quantity)}
+              {formatBDT(comparePriceValue * item.quantity)}
             </span>
           )}
         </div>
@@ -75,8 +116,8 @@ export function CartItem({ item }: CartItemProps) {
             <button
               onClick={() =>
                 canDecrease
-                  ? updateQty(item.variantId, item.quantity - 1)
-                  : removeFromCart(item.variantId)
+                  ? handleUpdateQuantity(item.quantity - 1)
+                  : handleRemove()
               }
               className="w-7 h-7 rounded-lg border border-gray-200
                          flex items-center justify-center
@@ -95,7 +136,7 @@ export function CartItem({ item }: CartItemProps) {
 
             <button
               onClick={() =>
-                canIncrease && updateQty(item.variantId, item.quantity + 1)
+                canIncrease && handleUpdateQuantity(item.quantity + 1)
               }
               disabled={!canIncrease}
               className="w-7 h-7 rounded-lg border border-gray-200
@@ -110,7 +151,7 @@ export function CartItem({ item }: CartItemProps) {
 
           {/* Remove */}
           <button
-            onClick={() => removeFromCart(item.variantId)}
+            onClick={handleRemove}
             className="p-1.5 text-gray-400 hover:text-red-500
                        transition-colors rounded-lg hover:bg-red-50"
           >

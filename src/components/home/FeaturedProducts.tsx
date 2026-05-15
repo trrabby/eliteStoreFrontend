@@ -28,7 +28,7 @@ export function FeaturedProducts({
   sale,
 }: FeaturedProductsProps) {
   const [activeTab, setActiveTab] = useState("featured");
-  console.log(featured);
+  // console.log(featured);
   const tabMap: Record<string, ProductCardData[]> = {
     featured,
     new: newest,

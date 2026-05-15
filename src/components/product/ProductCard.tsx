@@ -9,8 +9,10 @@ import { formatBDT, discountPercent } from "@/lib/utils/currency";
 import { useFlyToCart } from "@/components/shared/FlyToCart";
 import { useCart } from "@/lib/hooks/useCart";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "@/store";
-import { toggleWishlistItem } from "@/store/slices/wishlistSlice";
+import {
+  selectWishitems,
+  toggleWishlistItem,
+} from "@/store/slices/wishlistSlice";
 import { toggleWishlist } from "@/services/wishlist.service";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
@@ -46,7 +48,7 @@ export function ProductCard({
   const { flyToCart } = useFlyToCart();
   const { addToCart } = useCart();
 
-  const wishlistIds = useSelector((s: RootState) => s.wishlist.productIds);
+  const wishlistIds = useSelector(selectWishitems);
   const isWishlisted = wishlistIds.includes(product.id);
 
   const [isAdding, setIsAdding] = useState(false);

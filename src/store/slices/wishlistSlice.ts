@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { RootState } from "..";
 
 type WishlistState = {
   productIds: number[];
@@ -36,6 +37,9 @@ export const wishlistSlice = createSlice({
     },
   },
 });
+
+// selectors
+export const selectWishitems = (state: RootState) => state.wishlist.productIds;
 
 export const {
   setWishlist,

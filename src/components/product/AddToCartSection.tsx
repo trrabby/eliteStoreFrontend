@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { ShoppingCart, Heart, Zap } from "lucide-react";
 import { VariantSelector } from "./VariantSelector";
@@ -10,8 +10,10 @@ import { MagneticButton } from "@/components/shared/MagneticButton";
 import { useFlyToCart } from "@/components/shared/FlyToCart";
 import { useCart } from "@/lib/hooks/useCart";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/store";
-import { toggleWishlistItem } from "@/store/slices/wishlistSlice";
+import {
+  selectWishitems,
+  toggleWishlistItem,
+} from "@/store/slices/wishlistSlice";
 import { toggleWishlist } from "@/services/wishlist.service";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -37,14 +39,13 @@ export function AddToCartSection({
   const { addToCart } = useCart();
   const { flyToCart } = useFlyToCart();
 
-  const wishlistIds = useSelector((s: RootState) => s.wishlist.productIds);
+  const wishlistIds = useSelector(selectWishitems);
   const isWishlisted = wishlistIds.includes(product.id);
 
   const [selectedVariant, setSelectedVariant] = useState(defaultVariant);
   const [quantity, setQuantity] = useState(1);
   const [addingCart, setAddingCart] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
-  const imgRef = useRef<HTMLDivElement>(null);
 
   const price = flashOffer
     ? Number(flashOffer.salePrice)

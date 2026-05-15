@@ -74,7 +74,6 @@ export default function LoginPage() {
 
       if (!loginResponse?.success) {
         toast.error(loginResponse?.message ?? "Login failed");
-
         return;
       }
 
@@ -83,7 +82,6 @@ export default function LoginPage() {
 
       if (!profileResponse?.success) {
         toast.error("Failed to retrieve user profile");
-
         return;
       }
 
@@ -92,7 +90,6 @@ export default function LoginPage() {
       const cartInfo = cart.data;
       const wishlist = await getWishlist();
       const notifications = await getMyNotifications({});
-      // console.log(notifications.data);
 
       // hydrate redux
       dispatch(setUser({ user: reduxUser }));
@@ -102,12 +99,16 @@ export default function LoginPage() {
 
       toast.success("Welcome back 👋");
 
-      router.push(redirect);
+      // Redirect logic
+      const redirectTo =
+        redirect && redirect !== "/login" && redirect !== "/register"
+          ? redirect
+          : "/";
 
+      router.push(redirectTo);
       router.refresh();
     } catch (error) {
       console.error(error);
-
       toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
