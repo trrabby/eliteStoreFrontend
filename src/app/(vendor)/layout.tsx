@@ -1,10 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Logo } from "@/components/shared/Logo";
+
+import { usePathname, useRouter } from "next/navigation";
+
 import {
   LayoutDashboard,
   Package,
@@ -15,18 +16,59 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
+
 import { motion } from "framer-motion";
+
+import { toast } from "sonner";
+
+import { Logo } from "@/components/shared/Logo";
+
 import { NotificationToast } from "@/components/shared/NotificationToast";
+
 import { SocketProvider } from "@/components/providers/SocketProvider";
-import { useAuth } from "@/lib/hooks/useAuth";
+
+import { logout } from "@/services/auth.service";
+
+import { useAppDispatch, useAppSelector } from "@/store/hook";
+
+import { setLogout, selectCurrentUser } from "@/store/slices/authSlice";
 
 const VENDOR_NAV = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/vendor/dashboard" },
-  { icon: Package, label: "Products", href: "/vendor/products" },
-  { icon: ShoppingCart, label: "Orders", href: "/vendor/orders" },
-  { icon: Archive, label: "Inventory", href: "/vendor/inventory" },
-  { icon: Star, label: "Reviews", href: "/vendor/reviews" },
-  { icon: Store, label: "My Store", href: "/vendor/store" },
+  {
+    icon: LayoutDashboard,
+    label: "Dashboard",
+    href: "/vendor/dashboard",
+  },
+
+  {
+    icon: Package,
+    label: "Products",
+    href: "/vendor/products",
+  },
+
+  {
+    icon: ShoppingCart,
+    label: "Orders",
+    href: "/vendor/orders",
+  },
+
+  {
+    icon: Archive,
+    label: "Inventory",
+    href: "/vendor/inventory",
+  },
+
+  {
+    icon: Star,
+    label: "Reviews",
+    href: "/vendor/reviews",
+  },
+
+  {
+    icon: Store,
+    label: "My Store",
+    href: "/vendor/store",
+  },
 ];
 
 export default function VendorLayout({
@@ -34,17 +76,67 @@ export default function VendorLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isLoggedIn, isLoading, isVendor, isAdmin, logout } = useAuth();
+  const user = useAppSelector(selectCurrentUser);
+
+  const dispatch = useAppDispatch();
+
   const router = useRouter();
+
   const pathname = usePathname();
 
+  // protect vendor routes
   useEffect(() => {
-    if (!isLoading && (!isLoggedIn || (!isVendor && !isAdmin))) {
-      router.push("/");
-    }
-  }, [isLoading, isLoggedIn, isVendor, isAdmin, router]);
+    if (!user) {
+      router.replace("/login");
 
-  if (isLoading || !isLoggedIn) return null;
+      return;
+    }
+
+    const isAllowed =
+      user.role === "VENDOR" ||
+      user.role === "ADMIN" ||
+      user.role === "SUPER_ADMIN";
+
+    if (!isAllowed) {
+      router.replace("/");
+    }
+  }, [user, router]);
+
+  const handleLogout = async () => {
+    try {
+      const res = await logout();
+
+      if (res?.success) {
+        dispatch(setLogout());
+
+        toast.success("Logged out successfully");
+
+        router.push("/login");
+
+        router.refresh();
+      } else {
+        toast.error("Logout failed");
+      }
+    } catch {
+      toast.error("Something went wrong");
+    }
+  };
+
+  // prevent flicker
+  if (!user) return null;
+
+  const isAllowed =
+    user.role === "VENDOR" ||
+    user.role === "ADMIN" ||
+    user.role === "SUPER_ADMIN";
+
+  if (!isAllowed) return null;
+
+  const firstName = user.accountInfo?.firstName ?? "";
+
+  const lastName = user.accountInfo?.lastName ?? "";
+
+  const avatarLetter = firstName?.charAt(0)?.toUpperCase() ?? "V";
 
   return (
     <SocketProvider>
@@ -52,13 +144,14 @@ export default function VendorLayout({
         {/* Sidebar */}
         <aside
           className="hidden lg:flex w-60 bg-white border-r
-                          border-gray-100 flex-col sticky top-0
-                          h-screen overflow-y-auto"
+                     border-gray-100 flex-col sticky top-0
+                     h-screen overflow-y-auto"
         >
           <div className="p-5 border-b border-gray-100">
             <Link href="/">
               <Logo size="sm" />
             </Link>
+
             <p className="text-xs text-gray-400 mt-1 font-medium">
               Vendor Panel
             </p>
@@ -67,6 +160,7 @@ export default function VendorLayout({
           <nav className="flex-1 p-4 space-y-1">
             {VENDOR_NAV.map((item) => {
               const isActive = pathname.startsWith(item.href);
+
               return (
                 <Link
                   key={item.href}
@@ -84,7 +178,9 @@ export default function VendorLayout({
                     size={16}
                     className={isActive ? "text-primary" : "text-gray-400"}
                   />
+
                   <span className="flex-1">{item.label}</span>
+
                   {isActive && (
                     <ChevronRight size={14} className="text-primary" />
                   )}
@@ -93,9 +189,10 @@ export default function VendorLayout({
             })}
           </nav>
 
+          {/* Logout */}
           <div className="p-4 border-t border-gray-100">
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="w-full flex items-center gap-3 px-3 py-2.5
                          rounded-xl text-sm text-red-500
                          hover:bg-red-50 transition-all"
@@ -106,25 +203,30 @@ export default function VendorLayout({
           </div>
         </aside>
 
-        {/* Content */}
+        {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
           <header
-            className="bg-white border-b border-gray-100 px-6 py-4
-                             flex items-center justify-between"
+            className="bg-white border-b border-gray-100
+                       px-6 py-4 flex items-center
+                       justify-between"
           >
             <h1 className="font-display font-semibold text-gray-900">
               {VENDOR_NAV.find((n) => pathname.startsWith(n.href))?.label ??
                 "Dashboard"}
             </h1>
+
             <div className="flex items-center gap-3 text-sm text-gray-500">
               <div
                 className="w-7 h-7 rounded-full bg-gradient-primary
-                              flex items-center justify-center text-white
-                              text-xs font-bold"
+                           flex items-center justify-center
+                           text-white text-xs font-bold"
               >
-                {user?.firstName?.[0]}
+                {avatarLetter}
               </div>
-              {user?.firstName}
+
+              <span className="font-medium">
+                {firstName} {lastName}
+              </span>
             </div>
           </header>
 

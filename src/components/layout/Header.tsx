@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import Link from "next/link";
@@ -14,20 +15,26 @@ import {
 import { Logo } from "@/components/shared/Logo";
 import { NotificationBell } from "@/components/shared/NotificationBell";
 import { SearchBar } from "@/components/shared/SearchBar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CartDrawer } from "../cart/CartDrawer";
 import Image from "next/image";
-import { IUser } from "@/store/slices/authSlice";
+import { selectCurrentUser } from "@/store/slices/authSlice";
+import { useAppSelector } from "@/store/hook";
 
 export function Header() {
   const dispatch = useDispatch();
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
   const cart = useSelector((s: RootState) => s.cart);
   const ui = useSelector((s: RootState) => s.ui);
-  const user = useSelector((s: RootState) => s.auth.user) as IUser | null;
+  const user = useAppSelector(selectCurrentUser);
 
   const totalItems = cart.items.reduce((sum, i) => sum + i.quantity, 0);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // close all drawers on route change
   useEffect(() => {
@@ -75,8 +82,8 @@ export function Header() {
               <Search size={20} />
             </button>
 
-            {/* Notifications */}
-            {user && <NotificationBell />}
+            {/* Notifications - only show when mounted */}
+            {mounted && user && <NotificationBell />}
 
             {/* Wishlist */}
             <Link
@@ -112,38 +119,47 @@ export function Header() {
               </AnimatePresence>
             </button>
 
-            {/* Account */}
-            {user ? (
-              <Link
-                href="/account"
-                className="hidden sm:flex items-center gap-2 p-1"
-                aria-label="Account"
-              >
-                {user?.accountInfo?.avatar ? (
-                  <Image
-                    src={user?.accountInfo?.avatar}
-                    alt={user?.accountInfo?.firstName}
-                    height={10}
-                    width={10}
-                    className="w-8 h-8 rounded-full object-cover border-2 border-primary-light"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
-                    {user?.accountInfo?.firstName}
-                    {user?.accountInfo?.lastName}
-                  </div>
-                )}
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className="hidden sm:flex items-center gap-2 text-sm px-4 py-2
+            {/* Account - only render on client to prevent mismatch */}
+            {mounted &&
+              (user ? (
+                <Link
+                  href="/account"
+                  className="hidden sm:flex items-center gap-2 p-1"
+                  aria-label="Account"
+                >
+                  {user?.accountInfo?.avatar ? (
+                    <Image
+                      src={user?.accountInfo?.avatar}
+                      alt={user?.accountInfo?.firstName || "User avatar"}
+                      width={32}
+                      height={32}
+                      className="w-8 h-8 rounded-full object-cover border-2 border-primary-light"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
+                      {user?.accountInfo?.firstName?.[0]}
+                      {user?.accountInfo?.lastName?.[0]}
+                    </div>
+                  )}
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="hidden sm:flex items-center gap-2 text-sm px-4 py-2
                            border border-primary text-primary rounded-md
                            hover:bg-primary hover:text-white transition"
-              >
+                >
+                  <User size={16} />
+                  Login
+                </Link>
+              ))}
+
+            {/* Fallback for SSR */}
+            {!mounted && (
+              <div className="hidden sm:flex items-center gap-2 text-sm px-4 py-2 border border-primary text-primary rounded-md">
                 <User size={16} />
                 Login
-              </Link>
+              </div>
             )}
           </div>
         </div>

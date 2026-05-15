@@ -2,15 +2,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { Star, Plus } from "lucide-react";
 import { RatingBreakdown } from "./RatingBreakdown";
 import { ReviewCard } from "./ReviewCard";
 import { Pagination } from "./Pagination";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { getProductReviews } from "@/services/review.service";
-import { useAuth } from "@/lib/hooks/useAuth";
 import Link from "next/link";
+import { useAppSelector } from "@/store/hook";
+import { selectCurrentUser } from "@/store/slices/authSlice";
 
 type ReviewSectionProps = {
   productId: number;
@@ -23,7 +23,7 @@ export function ReviewSection({
   averageRating,
   reviewCount,
 }: ReviewSectionProps) {
-  const { isLoggedIn } = useAuth();
+  const user = useAppSelector(selectCurrentUser);
   const [data, setData] = useState<any>(null);
   const [page, setPage] = useState(1);
   const [rating, setRating] = useState<number | undefined>();
@@ -68,7 +68,7 @@ export function ReviewSection({
       )}
 
       {/* Write review CTA */}
-      {isLoggedIn && (
+      {user && (
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             {/* Rating filter */}

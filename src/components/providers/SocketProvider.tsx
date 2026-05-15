@@ -1,18 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/store";
+import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import {
   pushNotification,
   setUnreadCount,
   markAllRead,
 } from "@/store/slices/notificationSlice";
+import { getAccessToken } from "@/services/auth.service";
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch();
-  const accessToken = useSelector((s: RootState) => s.auth.accessToken);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAccessToken().then((token) => {
+      setAccessToken(token);
+    });
+  }, []);
 
   useEffect(() => {
     // guard — only runs in browser

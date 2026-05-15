@@ -75,13 +75,14 @@ const authSlice = createSlice({
       }
     },
 
-    logout: (state) => {
+    setLogout: (state) => {
       state.user = null;
     },
   },
 });
 
-export const { setUser, updateNotificationCount, logout } = authSlice.actions;
+export const { setUser, updateNotificationCount, setLogout } =
+  authSlice.actions;
 
 export default authSlice.reducer;
 

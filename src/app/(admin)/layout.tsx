@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+
+import { usePathname, useRouter } from "next/navigation";
 
 import {
   LayoutDashboard,
@@ -23,26 +24,52 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
+
 import { motion } from "framer-motion";
+
+import { toast } from "sonner";
+
 import { NotificationToast } from "@/components/shared/NotificationToast";
 import { SocketProvider } from "@/components/providers/SocketProvider";
-import { useAuth } from "@/lib/hooks/useAuth";
+
+import { logout } from "@/services/auth.service";
+
+import { useAppDispatch, useAppSelector } from "@/store/hook";
+
+import { setLogout, selectCurrentUser } from "@/store/slices/authSlice";
 
 const ADMIN_NAV = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin/dashboard" },
+
   { icon: Users, label: "Users", href: "/admin/users" },
+
   { icon: Store, label: "Vendors", href: "/admin/vendors" },
+
   { icon: Package, label: "Products", href: "/admin/products" },
+
   { icon: Grid, label: "Categories", href: "/admin/categories" },
+
   { icon: Award, label: "Brands", href: "/admin/brands" },
+
   { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
+
   { icon: Truck, label: "Shipments", href: "/admin/shipments" },
+
   { icon: CreditCard, label: "Payments", href: "/admin/payments" },
+
   { icon: RotateCcw, label: "Returns", href: "/admin/returns" },
+
   { icon: Star, label: "Reviews", href: "/admin/reviews" },
+
   { icon: Tag, label: "Coupons", href: "/admin/coupons" },
+
   { icon: Wallet, label: "Wallet", href: "/admin/wallet" },
-  { icon: Bell, label: "Notifications", href: "/admin/notifications" },
+
+  {
+    icon: Bell,
+    label: "Notifications",
+    href: "/admin/notifications",
+  },
 ];
 
 export default function AdminLayout({
@@ -50,17 +77,61 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isLoggedIn, isLoading, isAdmin, logout } = useAuth();
-  const router = useRouter();
+  const user = useAppSelector(selectCurrentUser);
+
   const pathname = usePathname();
 
-  useEffect(() => {
-    if (!isLoading && (!isLoggedIn || !isAdmin)) {
-      router.push("/");
-    }
-  }, [isLoading, isLoggedIn, isAdmin, router]);
+  const router = useRouter();
 
-  if (isLoading || !isLoggedIn) return null;
+  const dispatch = useAppDispatch();
+
+  // protect admin routes
+  useEffect(() => {
+    if (!user) {
+      router.replace("/login");
+
+      return;
+    }
+
+    const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+
+    if (!isAdmin) {
+      router.replace("/");
+    }
+  }, [user, router]);
+
+  const handleLogout = async () => {
+    try {
+      const res = await logout();
+
+      if (res?.success) {
+        dispatch(setLogout());
+
+        toast.success("Logged out successfully");
+
+        router.push("/login");
+
+        router.refresh();
+      } else {
+        toast.error("Logout failed");
+      }
+    } catch {
+      toast.error("Something went wrong");
+    }
+  };
+
+  // prevent render flicker
+  if (!user) return null;
+
+  const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+
+  if (!isAdmin) return null;
+
+  const firstName = user.accountInfo?.firstName ?? "";
+
+  const lastName = user.accountInfo?.lastName ?? "";
+
+  const avatarLetter = firstName?.charAt(0)?.toUpperCase() ?? "A";
 
   return (
     <SocketProvider>
@@ -68,11 +139,12 @@ export default function AdminLayout({
         {/* Sidebar */}
         <aside
           className="hidden lg:flex w-60 bg-gray-900 flex-col
-                          sticky top-0 h-screen overflow-y-auto"
+                     sticky top-0 h-screen overflow-y-auto"
         >
           <div className="p-5 border-b border-gray-800">
             <div className="font-display font-bold text-xl">
               <span className="text-white">Elite</span>
+
               <span className="text-primary"> Admin</span>
             </div>
           </div>
@@ -80,6 +152,7 @@ export default function AdminLayout({
           <nav className="flex-1 p-4 space-y-0.5">
             {ADMIN_NAV.map((item) => {
               const isActive = pathname.startsWith(item.href);
+
               return (
                 <Link
                   key={item.href}
@@ -94,31 +167,37 @@ export default function AdminLayout({
                              }`}
                 >
                   <item.icon size={16} />
+
                   <span className="flex-1">{item.label}</span>
+
                   {isActive && <ChevronRight size={14} />}
                 </Link>
               );
             })}
           </nav>
 
+          {/* User Info */}
           <div className="p-4 border-t border-gray-800">
             <div className="flex items-center gap-3 mb-3 px-2">
               <div
                 className="w-8 h-8 rounded-full bg-gradient-primary
-                              flex items-center justify-center text-white
-                              text-xs font-bold shrink-0"
+                           flex items-center justify-center
+                           text-white text-xs font-bold shrink-0"
               >
-                {user?.firstName?.[0]}
+                {avatarLetter}
               </div>
+
               <div className="min-w-0">
                 <p className="text-xs font-medium text-white truncate">
-                  {user?.firstName} {user?.lastName}
+                  {firstName} {lastName}
                 </p>
-                <p className="text-xs text-gray-500 truncate">{user?.role}</p>
+
+                <p className="text-xs text-gray-500 truncate">{user.role}</p>
               </div>
             </div>
+
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="w-full flex items-center gap-2 px-3 py-2
                          rounded-xl text-sm text-gray-400
                          hover:bg-gray-800 hover:text-red-400
@@ -130,20 +209,22 @@ export default function AdminLayout({
           </div>
         </aside>
 
-        {/* Content */}
+        {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
           <header
-            className="bg-white border-b border-gray-100 px-6 py-4
-                             flex items-center justify-between sticky top-0 z-10"
+            className="bg-white border-b border-gray-100
+                       px-6 py-4 flex items-center
+                       justify-between sticky top-0 z-10"
           >
             <h1 className="font-display font-semibold text-gray-900">
               {ADMIN_NAV.find((n) => pathname.startsWith(n.href))?.label ??
                 "Dashboard"}
             </h1>
+
             <Link
               href="/"
-              className="text-xs text-gray-400 hover:text-primary
-                                      transition-colors"
+              className="text-xs text-gray-400
+                         hover:text-primary transition-colors"
             >
               ← Back to store
             </Link>

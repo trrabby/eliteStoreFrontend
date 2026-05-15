@@ -21,7 +21,10 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useAuth } from "@/lib/hooks/useAuth";
+import { useAppDispatch, useAppSelector } from "@/store/hook";
+import { selectCurrentUser, setLogout } from "@/store/slices/authSlice";
+import { logout } from "@/services/auth.service";
+import { toast } from "sonner";
 
 const ACCOUNT_NAV = [
   { icon: User, label: "My Profile", href: "/account" },
@@ -39,19 +42,29 @@ export default function AccountLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isLoggedIn, isLoading, logout } = useAuth();
+  const user = useAppSelector(selectCurrentUser);
   const router = useRouter();
   const pathname = usePathname();
+  const dispatch = useAppDispatch();
 
   // guard
   useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
+    if (!user) {
       router.push(`/login?redirect=${pathname}`);
     }
-  }, [isLoading, isLoggedIn, router, pathname]);
+  }, [user, router, pathname]);
+  if (!user) return null;
 
-  if (isLoading || !isLoggedIn) return null;
+  const logoutFun = async () => {
+    const res = await logout();
 
+    if (res.success) {
+      dispatch(setLogout());
+      router.push("/login");
+    }
+
+    toast.info(res.success ?? "Logged out");
+  };
   return (
     <SocketProvider>
       <div className="min-h-screen bg-gray-50">
@@ -80,12 +93,13 @@ export default function AccountLayout({
                                   flex items-center justify-center
                                   text-white font-bold text-lg shrink-0"
                   >
-                    {user?.firstName?.[0]}
-                    {user?.lastName?.[0]}
+                    {user?.accountInfo?.firstName}
+                    {user?.accountInfo?.lastName}
                   </div>
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900 truncate">
-                      {user?.firstName} {user?.lastName}
+                      {user?.accountInfo?.firstName}{" "}
+                      {user?.accountInfo?.firstName}
                     </p>
                     <p className="text-xs text-gray-400 truncate">
                       {user?.email}
@@ -130,7 +144,7 @@ export default function AccountLayout({
 
                   {/* Logout */}
                   <button
-                    onClick={logout}
+                    onClick={logoutFun}
                     className="w-full flex items-center gap-3 px-3 py-2.5
                                rounded-xl text-sm font-medium text-red-500
                                hover:bg-red-50 transition-all duration-200

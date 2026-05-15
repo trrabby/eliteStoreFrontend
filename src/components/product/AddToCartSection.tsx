@@ -14,10 +14,11 @@ import { RootState } from "@/store";
 import { toggleWishlistItem } from "@/store/slices/wishlistSlice";
 import { toggleWishlist } from "@/services/wishlist.service";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/hooks/useAuth";
 import { toast } from "sonner";
 import { formatBDT } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils/cn";
+import { useAppSelector } from "@/store/hook";
+import { selectCurrentUser } from "@/store/slices/authSlice";
 
 type AddToCartSectionProps = {
   product: any;
@@ -31,7 +32,7 @@ export function AddToCartSection({
   flashOffer,
 }: AddToCartSectionProps) {
   const router = useRouter();
-  const { isLoggedIn } = useAuth();
+  const user = useAppSelector(selectCurrentUser);
   const dispatch = useDispatch();
   const { addToCart } = useCart();
   const { flyToCart } = useFlyToCart();
@@ -57,7 +58,7 @@ export function AddToCartSection({
   const { registerCartRef } = useFlyToCart();
 
   const handleAddToCart = async () => {
-    if (!isLoggedIn) {
+    if (!user) {
       router.push("/login");
       return;
     }
@@ -91,7 +92,7 @@ export function AddToCartSection({
   };
 
   const handleBuyNow = async () => {
-    if (!isLoggedIn) {
+    if (!user) {
       router.push("/login");
       return;
     }
@@ -101,7 +102,7 @@ export function AddToCartSection({
   };
 
   const handleWishlist = async () => {
-    if (!isLoggedIn) {
+    if (!user) {
       router.push("/login");
       return;
     }
