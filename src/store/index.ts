@@ -62,12 +62,16 @@ const persistedWishlistReducer = persistReducer(
 // Root Reducer
 // ========================
 
+import { checkoutSlice } from "./slices/checkoutSlice";
+
+// in rootReducer:
 const rootReducer = combineReducers({
   auth: persistedAuthReducer,
   cart: persistedCartReducer,
   wishlist: persistedWishlistReducer,
   notification: notificationSlice.reducer,
   ui: uiSlice.reducer,
+  checkout: checkoutSlice.reducer, // ← add this
 });
 
 // ========================

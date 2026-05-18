@@ -9,15 +9,16 @@ export const getAllProducts = async (params: {
   page?: number;
   limit?: number;
   status?: string;
-  brandId?: number;
+  brandIds?: number[];
   vendorId?: number;
-  categoryId?: number;
+  categoryIds?: number[];
   isFeatured?: boolean;
   minPrice?: number;
   maxPrice?: number;
   search?: string;
   tags?: string;
   sortBy?: string;
+  minRating?: number;
 }) => {
   try {
     return await fetchPublic(`/products${buildQuery(params)}`, {}, 0);

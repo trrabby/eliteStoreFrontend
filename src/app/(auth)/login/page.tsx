@@ -103,9 +103,10 @@ export default function LoginPage() {
 
       toast.success("Welcome back 👋");
 
-      // Redirect logic
       const redirectTo =
-        redirect && redirect !== "/login" && redirect !== "/register"
+        redirect?.startsWith("/") &&
+        redirect !== "/login" &&
+        redirect !== "/register"
           ? redirect
           : "/";
 

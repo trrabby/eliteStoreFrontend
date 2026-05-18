@@ -19,24 +19,23 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CartDrawer } from "../cart/CartDrawer";
 import Image from "next/image";
-import { selectCurrentUser } from "@/store/slices/authSlice";
 import { useAppSelector } from "@/store/hook";
+import { selectCurrentUser } from "@/store/slices/authSlice";
 
 export function Header() {
   const dispatch = useDispatch();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
-  const cart = useSelector((s: RootState) => s.cart);
-  const ui = useSelector((s: RootState) => s.ui);
+  const cart = useSelector((state: RootState) => state.cart);
+  const isSearchOpen = useSelector((state: RootState) => state.ui.isSearchOpen);
   const user = useAppSelector(selectCurrentUser);
 
-  const totalItems = cart.items.reduce((sum, i) => sum + i.quantity, 0);
+  const totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // close all drawers on route change
   useEffect(() => {
     dispatch(closeAll());
   }, [pathname, dispatch]);
@@ -50,7 +49,6 @@ export function Header() {
           available
         </div>
 
-        {/* Main header */}
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-4">
           {/* Mobile menu toggle */}
           <button
@@ -61,19 +59,17 @@ export function Header() {
             <Menu size={22} />
           </button>
 
-          {/* Logo */}
           <Link href="/" className="flex items-center" aria-label="Elite Store">
             <Logo size="lg" />
           </Link>
 
-          {/* Search bar — desktop */}
+          {/* Desktop search */}
           <div className="hidden lg:flex flex-1 max-w-2xl mx-8">
             <SearchBar />
           </div>
 
-          {/* Right actions */}
           <div className="flex items-center gap-1 ml-auto">
-            {/* Search — mobile */}
+            {/* Mobile search button */}
             <button
               className="lg:hidden p-2 text-brand-600 hover:text-primary transition-colors"
               onClick={() => dispatch(toggleSearch())}
@@ -82,10 +78,8 @@ export function Header() {
               <Search size={20} />
             </button>
 
-            {/* Notifications - only show when mounted */}
             {mounted && user && <NotificationBell />}
 
-            {/* Wishlist */}
             <Link
               href="/account/wishlist"
               className="p-2 text-brand-600 hover:text-primary transition-colors"
@@ -94,7 +88,7 @@ export function Header() {
               <Heart size={20} />
             </Link>
 
-            {/* Cart */}
+            {/* Cart button */}
             <button
               className="p-2 text-brand-600 hover:text-primary transition-colors relative"
               onClick={() => dispatch(toggleCart())}
@@ -119,7 +113,7 @@ export function Header() {
               </AnimatePresence>
             </button>
 
-            {/* Account - only render on client to prevent mismatch */}
+            {/* User account section */}
             {mounted &&
               (user ? (
                 <Link
@@ -127,18 +121,18 @@ export function Header() {
                   className="hidden sm:flex items-center gap-2 p-1"
                   aria-label="Account"
                 >
-                  {user?.accountInfo?.avatar ? (
+                  {user.accountInfo?.avatar ? (
                     <Image
-                      src={user?.accountInfo?.avatar}
-                      alt={user?.accountInfo?.firstName || "User avatar"}
+                      src={user.accountInfo.avatar}
+                      alt={user.accountInfo.firstName || "User avatar"}
                       width={32}
                       height={32}
                       className="w-8 h-8 rounded-full object-cover border-2 border-primary-light"
                     />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
-                      {user?.accountInfo?.firstName?.[0]}
-                      {user?.accountInfo?.lastName?.[0]}
+                      {user.accountInfo?.firstName?.[0]}
+                      {user.accountInfo?.lastName?.[0]}
                     </div>
                   )}
                 </Link>
@@ -153,24 +147,15 @@ export function Header() {
                   Login
                 </Link>
               ))}
-
-            {/* Fallback for SSR */}
-            {!mounted && (
-              <div className="hidden sm:flex items-center gap-2 text-sm px-4 py-2 border border-primary text-primary rounded-md">
-                <User size={16} />
-                Login
-              </div>
-            )}
           </div>
         </div>
       </header>
 
-      {/* Cart drawer */}
       <CartDrawer />
 
       {/* Mobile search overlay */}
       <AnimatePresence>
-        {ui.isSearchOpen && (
+        {isSearchOpen && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -180,7 +165,6 @@ export function Header() {
           >
             <div className="flex items-center gap-3">
               <SearchBar autoFocus />
-
               <button
                 onClick={() => dispatch(toggleSearch())}
                 className="p-2 text-brand-400 hover:text-brand-700 shrink-0 transition"

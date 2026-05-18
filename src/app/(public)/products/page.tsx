@@ -4,7 +4,6 @@ import { getAllProducts } from "@/services/product.service";
 import { getCategoryTree } from "@/services/category.service";
 import { getAllBrands } from "@/services/brand.service";
 import { ProductCard } from "@/components/product/ProductCard";
-import { ProductCardSkeleton } from "@/components/product/ProductCardSkeleton";
 import { ProductFilters } from "@/components/product/ProductFilters";
 import { ProductSortBar } from "@/components/product/ProductSortBar";
 import { ActiveFilterChips } from "@/components/product/ActiveFilterChips";
@@ -25,50 +24,73 @@ type SearchParams = {
   page?: string;
   limit?: string;
   sortBy?: string;
-  categoryId?: string;
-  brandId?: string;
+  categoryIds?: string;
+  brandIds?: string;
   minPrice?: string;
   maxPrice?: string;
   search?: string;
   status?: string;
+  minRating?: string;
 };
 
-export default async function ProductsPage({
+const AllProductsPage = async ({
   searchParams,
 }: {
   searchParams: SearchParams;
-}) {
-  const page = Number(searchParams.page ?? 1);
-  const limit = Number(searchParams.limit ?? 20);
+}) => {
+  const query = await searchParams;
 
-  // parallel fetch — products + filters data
+  const page = Number(query.page ?? 1);
+  const limit = Number(query.limit ?? 20);
+
+  // helper: supports repeated query params in Next.js
+  const parseArray = (
+    value: string | string[] | undefined,
+  ): number[] | undefined => {
+    if (!value) return undefined;
+
+    if (Array.isArray(value)) {
+      return value.map(Number).filter(Boolean);
+    }
+
+    // single or comma-separated fallback safety
+    return value.split(",").map(Number).filter(Boolean);
+  };
+
   const [productsRes, categoriesRes, brandsRes] = await Promise.all([
     getAllProducts({
       page,
       limit,
-      sortBy: searchParams.sortBy,
-      categoryId: searchParams.categoryId
-        ? Number(searchParams.categoryId)
-        : undefined,
-      brandId: searchParams.brandId ? Number(searchParams.brandId) : undefined,
-      minPrice: searchParams.minPrice
-        ? Number(searchParams.minPrice)
-        : undefined,
-      maxPrice: searchParams.maxPrice
-        ? Number(searchParams.maxPrice)
-        : undefined,
-      search: searchParams.search,
+      sortBy: query.sortBy,
+
+      // ✔ MULTI CATEGORY (FIXED)
+      categoryIds: parseArray(query.categoryIds),
+
+      // ✔ MULTI BRAND (FIXED)
+      brandIds: parseArray(query.brandIds),
+
+      minPrice: query.minPrice ? Number(query.minPrice) : undefined,
+
+      maxPrice: query.maxPrice ? Number(query.maxPrice) : undefined,
+
+      minRating: query.minRating ? Number(query.minRating) : undefined,
+
+      search: query.search,
+
       status: "ACTIVE",
     }),
+
     getCategoryTree(),
     getAllBrands({ limit: 50, isActive: true }),
   ]);
 
   const products = productsRes?.data?.products ?? [];
   const total = productsRes?.data?.total ?? 0;
+
   const categories = (categoriesRes?.data ?? []).filter(
     (c: any) => c.depth === 0,
   );
+
   const brands = brandsRes?.data?.brands ?? [];
 
   return (
@@ -104,7 +126,7 @@ export default async function ProductsPage({
 
           {/* Product grid */}
           {products.length === 0 ? (
-            <EmptyProducts search={searchParams.search} />
+            <EmptyProducts search={query.search} />
           ) : (
             <>
               <div
@@ -129,7 +151,9 @@ export default async function ProductsPage({
       </div>
     </div>
   );
-}
+};
+
+export default AllProductsPage;
 
 function EmptyProducts({ search }: { search?: string }) {
   return (
