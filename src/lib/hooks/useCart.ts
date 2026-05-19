@@ -32,6 +32,7 @@ export const useCart = () => {
     try {
       const response = await getCartService();
       if (response?.success && response.data) {
+        // console.log(response.data);
         dispatch(setCart(response.data));
         return response.data;
       }
@@ -56,6 +57,7 @@ export const useCart = () => {
     stock: number;
   }) => {
     // Create cart item matching your slice structure
+
     const newCartItem = {
       id: Date.now(), // temporary id, will be replaced when fetching from server
       cartId: cart.id ?? 0,
@@ -81,7 +83,6 @@ export const useCart = () => {
         isActive: true,
       },
     };
-
     // Optimistic update
     dispatch(addItem(newCartItem));
 
@@ -102,6 +103,7 @@ export const useCart = () => {
       if (!result?.success) {
         // Rollback on failure
         dispatch(removeItem(payload.variantId));
+        // console.log(result);
         toast.error(result?.message ?? "Failed to add to cart");
         return false;
       }

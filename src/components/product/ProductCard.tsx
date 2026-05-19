@@ -13,9 +13,12 @@ import {
   selectWishitems,
   toggleWishlistItem,
 } from "@/store/slices/wishlistSlice";
+import { selectCurrentUser } from "@/store/slices/authSlice";
+import { useAppSelector } from "@/store/hook";
 import { toggleWishlist } from "@/services/wishlist.service";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export type ProductCardData = {
   id: number;
@@ -24,13 +27,33 @@ export type ProductCardData = {
   slug: string;
   averageRating: number;
   reviewCount: number;
-  images: { url: string; altText: string | null }[];
+
+  images: {
+    url: string;
+    altText: string | null;
+  }[];
+
   variants: {
+    id: number;
     price: number;
     comparePrice: number | null;
     stock: number;
   }[];
-  brand?: { name: string; slug: string } | null;
+
+  flashSaleItem?: {
+    salePrice: number;
+    discountType: "PERCENTAGE" | "FLAT";
+    discountValue: number;
+    flashSale: {
+      title: string;
+      endsAt: string;
+    };
+  } | null;
+
+  brand?: {
+    name: string;
+    slug: string;
+  } | null;
 };
 
 type ProductCardProps = {
@@ -45,9 +68,11 @@ export function ProductCard({
   className,
 }: ProductCardProps) {
   const dispatch = useDispatch();
+  const router = useRouter();
   const { flyToCart } = useFlyToCart();
   const { addToCart } = useCart();
 
+  const user = useAppSelector(selectCurrentUser);
   const wishlistIds = useSelector(selectWishitems);
   const isWishlisted = wishlistIds.includes(product.id);
 
@@ -57,9 +82,22 @@ export function ProductCard({
 
   const image = product.images?.[0];
   const variant = product.variants?.[0];
-  const price = variant?.price ?? 0;
-  const comparePrice = variant?.comparePrice ?? null;
+
+  const originalPrice = Number(variant?.price ?? 0);
+
+  const flashOffer = product.flashSaleItem;
+  // console.log(flashOffer);
+
+  const price = flashOffer?.salePrice
+    ? Number(flashOffer.salePrice)
+    : originalPrice;
+
+  const comparePrice = flashOffer
+    ? originalPrice
+    : Number(variant?.comparePrice ?? 0);
+
   const stock = variant?.stock ?? 0;
+
   const discount = discountPercent(price, comparePrice ?? 0);
   const outOfStock = stock === 0;
 
@@ -67,18 +105,23 @@ export function ProductCard({
     e.preventDefault();
     e.stopPropagation();
 
-    if (outOfStock || isAdding || !variant) return;
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    // guard: must have a real variant id
+    if (outOfStock || isAdding || !variant?.id) return;
 
     setIsAdding(true);
 
-    // trigger fly animation
     if (imgRef.current && image?.url) {
       flyToCart(image.url, imgRef.current);
     }
 
     const success = await addToCart({
       productId: product.id,
-      variantId: 0, // default variant — adjust when full variant data available
+      variantId: variant.id,
       quantity: 1,
       productName: product.name,
       variantName: "",
@@ -90,9 +133,7 @@ export function ProductCard({
     });
 
     if (success) {
-      toast.success("Added to cart!", {
-        icon: "🛍️",
-      });
+      toast.success("Added to cart!", { icon: "🛍️" });
     }
 
     setTimeout(() => setIsAdding(false), 1000);
@@ -102,6 +143,12 @@ export function ProductCard({
     e.preventDefault();
     e.stopPropagation();
 
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    // optimistic
     dispatch(toggleWishlistItem(product.id));
 
     const formData = new FormData();
@@ -109,7 +156,9 @@ export function ProductCard({
     const result = await toggleWishlist(formData);
 
     if (!result?.success) {
-      dispatch(toggleWishlistItem(product.id)); // rollback
+      // rollback
+      dispatch(toggleWishlistItem(product.id));
+      toast.error("Failed to update wishlist");
     }
   };
 
@@ -127,7 +176,7 @@ export function ProductCard({
     >
       <Link href={`/products/${product.slug}`}>
         <div className="card overflow-hidden bg-white">
-          {/* Image container */}
+          {/* Image */}
           <div
             ref={imgRef}
             className="relative aspect-4/5 overflow-hidden bg-primary-pale"
@@ -139,8 +188,7 @@ export function ProductCard({
                 fill
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className={cn(
-                  "object-cover transition-transform duration-700",
-                  "group-hover:scale-110",
+                  "object-cover transition-transform duration-700 group-hover:scale-110",
                   imgLoaded ? "opacity-100" : "opacity-0",
                 )}
                 onLoad={() => setImgLoaded(true)}
@@ -149,7 +197,6 @@ export function ProductCard({
               <div className="w-full h-full bg-gradient-pale" />
             )}
 
-            {/* Skeleton shimmer while loading */}
             {!imgLoaded && <div className="absolute inset-0 skeleton" />}
 
             {/* Badges */}
@@ -158,10 +205,7 @@ export function ProductCard({
                 <span className="badge-discount text-xs">-{discount}%</span>
               )}
               {outOfStock && (
-                <span
-                  className="bg-gray-700 text-white text-xs font-semibold
-                                 px-2 py-0.5 rounded-full"
-                >
+                <span className="bg-gray-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
                   Sold Out
                 </span>
               )}
@@ -174,8 +218,8 @@ export function ProductCard({
               className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full
                          bg-white/90 backdrop-blur-sm flex items-center
                          justify-center shadow-sm opacity-0
-                         group-hover:opacity-100 transition-opacity
-                         duration-200 hover:bg-primary-pale z-10"
+                         group-hover:opacity-100 transition-opacity duration-200
+                         hover:bg-primary-pale z-10"
               aria-label="Toggle wishlist"
             >
               <Heart
@@ -187,7 +231,7 @@ export function ProductCard({
               />
             </motion.button>
 
-            {/* Quick add to cart — bottom overlay */}
+            {/* Quick add overlay */}
             <motion.div
               className="absolute bottom-0 left-0 right-0 p-2
                          translate-y-full group-hover:translate-y-0
@@ -199,8 +243,7 @@ export function ProductCard({
                 whileTap={{ scale: 0.96 }}
                 className={cn(
                   "w-full py-2.5 rounded-xl text-white text-sm font-semibold",
-                  "flex items-center justify-center gap-2",
-                  "transition-all duration-200",
+                  "flex items-center justify-center gap-2 transition-all duration-200",
                   outOfStock
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-gradient-primary hover:brightness-105 shadow-pink",
@@ -215,8 +258,7 @@ export function ProductCard({
                         repeat: Infinity,
                         ease: "linear",
                       }}
-                      className="w-4 h-4 border-2 border-white/30
-                                 border-t-white rounded-full"
+                      className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                     />
                     Adding...
                   </>
@@ -230,26 +272,18 @@ export function ProductCard({
             </motion.div>
           </div>
 
-          {/* Product info */}
+          {/* Info */}
           <div className="p-3">
             {product.brand && (
-              <p
-                className="text-xs text-primary font-medium mb-1 uppercase
-                            tracking-wide"
-              >
+              <p className="text-xs text-primary font-medium mb-1 uppercase tracking-wide">
                 {product.brand.name}
               </p>
             )}
 
-            <h3
-              className="text-sm font-semibold text-gray-800
-                           line-clamp-2 leading-snug mb-2 group-hover:text-primary
-                           transition-colors"
-            >
+            <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug mb-2 group-hover:text-primary transition-colors">
               {product.name}
             </h3>
 
-            {/* Rating */}
             {product.reviewCount > 0 && (
               <div className="flex items-center gap-1 mb-2">
                 <div className="flex">
@@ -271,7 +305,6 @@ export function ProductCard({
               </div>
             )}
 
-            {/* Price */}
             <div className="flex items-center gap-2">
               <span className="text-base font-bold text-primary">
                 {formatBDT(price)}

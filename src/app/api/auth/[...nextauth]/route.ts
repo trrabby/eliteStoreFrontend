@@ -119,7 +119,7 @@ const authOptions: NextAuthOptions = {
           });
 
           const data = await response.json();
-          console.log("Login response from backend:", data);
+          // console.log("Login response from backend:", data);
 
           if (data?.data?.accessToken && data?.data?.refreshToken) {
             token.accessToken = data.data.accessToken;

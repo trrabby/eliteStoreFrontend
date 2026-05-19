@@ -79,7 +79,7 @@ export default function LoginPage() {
 
       // fetch profile
       const profileResponse = await getMyProfile();
-
+      // console.log(profileResponse);
       if (!profileResponse?.success) {
         toast.error("Failed to retrieve user profile");
         return;

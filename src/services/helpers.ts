@@ -8,78 +8,80 @@ import { config } from "@/config";
 // Core fetch wrapper with auto token refresh
 // ─────────────────────────────────────────
 
-export const fetchWithAuth = async (
-  url: string,
-  options: RequestInit = {},
-): Promise<any> => {
+export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("accessToken")?.value;
+  const isFormData = options.body instanceof FormData;
 
-  const headers = {
-    "Content-Type": "application/json",
+  const headers: Record<string, string> = {
+    ...(!isFormData && {
+      "Content-Type": "application/json",
+    }),
     ...((options.headers as Record<string, string>) ?? {}),
-    ...(accessToken ? { Authorization: accessToken } : {}),
+    ...(accessToken && {
+      Authorization: accessToken,
+    }),
   };
 
-  const res = await fetch(`${config().Backend_URL}${url}`, {
+  let res = await fetch(`${config().Backend_URL}${url}`, {
     ...options,
     headers,
     cache: "no-store",
   });
 
-  // 401 → try refresh
   if (res.status === 401) {
     const refreshToken = cookieStore.get("refreshToken")?.value;
 
-    if (!refreshToken) return { success: false, message: "Unauthorized" };
+    if (!refreshToken) {
+      return {
+        success: false,
+        message: "Unauthorized",
+      };
+    }
 
     const refreshRes = await fetch(
       `${config().Backend_URL}/auth/refresh-token`,
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: refreshToken,
         },
-        cache: "no-store",
       },
     );
 
     const refreshData = await refreshRes.json();
 
     if (!refreshData?.success) {
-      // refresh also failed — clear cookies
       cookieStore.delete("accessToken");
       cookieStore.delete("refreshToken");
+
       return {
         success: false,
-        message: "Session expired. Please login again.",
+        message: "Session expired",
       };
     }
 
-    // save new access token
     const newAccessToken = refreshData.data;
+
     cookieStore.set("accessToken", newAccessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       path: "/",
     });
 
-    // retry original request with new token
-    const retryRes = await fetch(`${config().Backend_URL}${url}`, {
+    res = await fetch(`${config().Backend_URL}${url}`, {
       ...options,
       headers: {
-        "Content-Type": "application/json",
-        ...((options.headers as Record<string, string>) ?? {}),
-        Authorization: newAccessToken,
+        ...headers,
+        Authorization: `Bearer ${newAccessToken}`,
       },
       cache: "no-store",
     });
-
-    return retryRes.json();
   }
 
-  return res.json();
+  const data = await res.json();
+
+  return data;
 };
 
 // ─────────────────────────────────────────

@@ -24,7 +24,7 @@ export const validateCart = async () => {
 // add item to cart
 export const addToCart = async (formData: FormData) => {
   try {
-    return await fetchWithAuth("/cart/items", {
+    return await fetchWithAuth("/cart/addItems", {
       method: "POST",
       headers: {},
       body: formData,

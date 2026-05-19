@@ -14,9 +14,9 @@ export function CartSummary() {
   const dispatch = useDispatch();
   const router = useRouter();
 
-  const shippingFee = subtotal >= 1000 ? 0 : 60;
+  const shippingFee = subtotal >= 1999 ? 0 : 60;
   const total = subtotal + shippingFee;
-  const freeShipping = subtotal >= 1000;
+  const freeShipping = subtotal >= 1999;
 
   const handleCheckout = () => {
     dispatch(toggleCart());
@@ -31,7 +31,7 @@ export function CartSummary() {
           <p className="text-xs text-gray-600 mb-1.5">
             Add{" "}
             <span className="font-bold text-primary">
-              {formatBDT(1000 - subtotal)}
+              {formatBDT(1999 - subtotal)}
             </span>{" "}
             more for free shipping!
           </p>

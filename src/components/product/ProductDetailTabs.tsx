@@ -87,7 +87,7 @@ export function ProductDetailTabs({
                   >
                     <span
                       className="text-sm text-gray-500 font-medium
-                                     w-36 flex-shrink-0"
+                                     w-36 shrink-0"
                     >
                       {attr.name}
                     </span>

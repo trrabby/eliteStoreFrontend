@@ -17,46 +17,65 @@ export function ActiveFilterChips({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const removeParam = (key: string, value?: string) => {
+  const removeParam = (key: string) => {
     const params = new URLSearchParams(searchParams.toString());
-
-    if (key === "brands" && value) {
-      const current = params.get("brands")?.split(",") ?? [];
-      const updated = current.filter((b) => b !== value);
-      if (updated.length) params.set("brands", updated.join(","));
-      else params.delete("brands");
-    } else {
-      params.delete(key);
-    }
-
+    params.delete(key);
     params.set("page", "1");
     router.push(`${pathname}?${params.toString()}`);
   };
 
   const chips: { label: string; onRemove: () => void }[] = [];
 
-  const categoryId = searchParams.get("categoryId");
-  if (categoryId) {
-    const cat = categories.find((c) => String(c.id) === categoryId);
-    if (cat) {
-      chips.push({
-        label: `Category: ${cat.name}`,
-        onRemove: () => removeParam("categoryId"),
+  // categoryIds — comma-separated
+  const categoryIdsParam = searchParams.get("categoryIds");
+  if (categoryIdsParam) {
+    categoryIdsParam
+      .split(",")
+      .filter(Boolean)
+      .forEach((id) => {
+        const cat = categories.find((c) => String(c.id) === id);
+        if (cat) {
+          chips.push({
+            label: `Category: ${cat.name}`,
+            onRemove: () => {
+              const params = new URLSearchParams(searchParams.toString());
+              const ids =
+                params.get("categoryIds")?.split(",").filter(Boolean) ?? [];
+              const next = ids.filter((x) => x !== id);
+              if (next.length) params.set("categoryIds", next.join(","));
+              else params.delete("categoryIds");
+              params.set("page", "1");
+              router.push(`${pathname}?${params.toString()}`);
+            },
+          });
+        }
       });
-    }
   }
 
-  const brandsParam = searchParams.get("brands");
-  if (brandsParam) {
-    brandsParam.split(",").forEach((id) => {
-      const brand = brands.find((b) => String(b.id) === id);
-      if (brand) {
-        chips.push({
-          label: `Brand: ${brand.name}`,
-          onRemove: () => removeParam("brands", id),
-        });
-      }
-    });
+  // brandIds — comma-separated
+  const brandIdsParam = searchParams.get("brandIds");
+  if (brandIdsParam) {
+    brandIdsParam
+      .split(",")
+      .filter(Boolean)
+      .forEach((id) => {
+        const brand = brands.find((b) => String(b.id) === id);
+        if (brand) {
+          chips.push({
+            label: `Brand: ${brand.name}`,
+            onRemove: () => {
+              const params = new URLSearchParams(searchParams.toString());
+              const ids =
+                params.get("brandIds")?.split(",").filter(Boolean) ?? [];
+              const next = ids.filter((x) => x !== id);
+              if (next.length) params.set("brandIds", next.join(","));
+              else params.delete("brandIds");
+              params.set("page", "1");
+              router.push(`${pathname}?${params.toString()}`);
+            },
+          });
+        }
+      });
   }
 
   const minPrice = searchParams.get("minPrice");
@@ -65,8 +84,11 @@ export function ActiveFilterChips({
     chips.push({
       label: `Price: ৳${minPrice ?? 0} – ৳${maxPrice ?? "∞"}`,
       onRemove: () => {
-        removeParam("minPrice");
-        removeParam("maxPrice");
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("minPrice");
+        params.delete("maxPrice");
+        params.set("page", "1");
+        router.push(`${pathname}?${params.toString()}`);
       },
     });
   }
@@ -91,14 +113,12 @@ export function ActiveFilterChips({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             className="flex items-center gap-1.5 bg-primary-pale text-primary
-                       text-xs font-medium px-3 py-1.5 rounded-full border
-                       border-primary/20"
+                       text-xs font-medium px-3 py-1.5 rounded-full border border-primary/20"
           >
             {chip.label}
             <button
               onClick={chip.onRemove}
-              className="hover:bg-primary hover:text-white rounded-full
-                         p-0.5 transition-all"
+              className="hover:bg-primary hover:text-white rounded-full p-0.5 transition-all"
             >
               <X size={10} />
             </button>

@@ -184,7 +184,7 @@ export default function CheckoutReviewPage() {
               <div key={item.variantId} className="flex gap-3 items-center">
                 <div
                   className="relative w-14 h-14 rounded-xl overflow-hidden
-                                bg-primary-pale flex-shrink-0"
+                                bg-primary-pale shrink-0"
                 >
                   <Image
                     src={item.product.images?.[0]?.url ?? "/placeholder.png"}
@@ -203,7 +203,7 @@ export default function CheckoutReviewPage() {
                   )}
                   <p className="text-xs text-gray-400">Qty: {item.quantity}</p>
                 </div>
-                <span className="text-sm font-bold text-primary flex-shrink-0">
+                <span className="text-sm font-bold text-primary shrink-0">
                   {formatBDT(Number(item.variant.price) * item.quantity)}
                 </span>
               </div>

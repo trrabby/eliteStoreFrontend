@@ -33,8 +33,15 @@ type CartItem = {
   cartId: number;
   productId: number;
   variantId: number;
+
   quantity: number;
+
+  // snapshot pricing
+  price: string | number;
+  comparePrice: string | number | null;
+
   addedAt: string;
+
   product: CartProduct;
   variant: CartVariant;
 };
@@ -51,9 +58,10 @@ export function CartItem({ item }: CartItemProps) {
     return typeof price === "string" ? parseFloat(price) : price;
   };
 
-  const currentPrice = getPrice(item.variant.price);
-  const comparePriceValue = item.variant.comparePrice
-    ? getPrice(item.variant.comparePrice)
+  const currentPrice = getPrice(item.price);
+
+  const comparePriceValue = item.comparePrice
+    ? getPrice(item.comparePrice)
     : null;
 
   const canIncrease = item.quantity < item.variant.stock;

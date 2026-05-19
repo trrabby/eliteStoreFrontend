@@ -146,8 +146,8 @@ export function AddressFormModal({
               {...register("landmark")}
             />
             <FormInput
-              label="Label (optional)"
-              placeholder="Home / Office"
+              label="Address Alias (Optional)"
+              placeholder="My Home | My Office"
               {...register("label")}
             />
           </div>
