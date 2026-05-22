@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { toast } from "sonner";
+import { signIn } from "next-auth/react";
 
 type OAuthButtonsProps = {
   redirect?: string;
@@ -13,11 +14,13 @@ export function OAuthButtons({ redirect = "/" }: OAuthButtonsProps) {
 
   // In a real implementation this would open OAuth popup
   // and get the provider token back
-  const handleOAuth = async (provider: "google" | "github") => {
+  const handleOAuthLogin = async (provider: "google" | "github") => {
     setLoading(provider);
 
     try {
-      window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/oauth/${provider}?redirect=${redirect}`;
+      await signIn(provider, {
+        callbackUrl: redirect || "/",
+      });
     } catch {
       toast.error("OAuth login failed. Please try again.");
 
@@ -44,7 +47,7 @@ export function OAuthButtons({ redirect = "/" }: OAuthButtonsProps) {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => handleOAuth("google")}
+          onClick={() => handleOAuthLogin("google")}
           disabled={!!loading}
           className="flex items-center justify-center gap-2.5 px-4 py-3
                      rounded-xl border-2 border-gray-200 bg-white
@@ -87,7 +90,7 @@ export function OAuthButtons({ redirect = "/" }: OAuthButtonsProps) {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => handleOAuth("github")}
+          onClick={() => handleOAuthLogin("github")}
           disabled={!!loading}
           className="flex items-center justify-center gap-2.5 px-4 py-3
                      rounded-xl border-2 border-gray-200 bg-white

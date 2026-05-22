@@ -1,11 +1,9 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { useEffect } from "react";
-
+import { useEffect, useState } from "react";
 import Link from "next/link";
-
 import { usePathname, useRouter } from "next/navigation";
-
 import {
   LayoutDashboard,
   Package,
@@ -15,61 +13,148 @@ import {
   Store,
   ChevronRight,
   LogOut,
+  Menu,
 } from "lucide-react";
-
 import { motion } from "framer-motion";
-
 import { toast } from "sonner";
-
 import { Logo } from "@/components/shared/Logo";
-
 import { NotificationToast } from "@/components/shared/NotificationToast";
-
 import { SocketProvider } from "@/components/providers/SocketProvider";
-
+import { MobileSidebarDrawer } from "@/components/shared/MobileSidebarDrawer";
 import { logout } from "@/services/auth.service";
-
 import { useAppDispatch, useAppSelector } from "@/store/hook";
-
 import { setLogout, selectCurrentUser } from "@/store/slices/authSlice";
 
 const VENDOR_NAV = [
-  {
-    icon: LayoutDashboard,
-    label: "Dashboard",
-    href: "/vendor/dashboard",
-  },
-
-  {
-    icon: Package,
-    label: "Products",
-    href: "/vendor/products",
-  },
-
-  {
-    icon: ShoppingCart,
-    label: "Orders",
-    href: "/vendor/orders",
-  },
-
-  {
-    icon: Archive,
-    label: "Inventory",
-    href: "/vendor/inventory",
-  },
-
-  {
-    icon: Star,
-    label: "Reviews",
-    href: "/vendor/reviews",
-  },
-
-  {
-    icon: Store,
-    label: "My Store",
-    href: "/vendor/store",
-  },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/vendor/dashboard" },
+  { icon: Package, label: "Products", href: "/vendor/products" },
+  { icon: ShoppingCart, label: "Orders", href: "/vendor/orders" },
+  { icon: Archive, label: "Inventory", href: "/vendor/inventory" },
+  { icon: Star, label: "Reviews", href: "/vendor/reviews" },
+  { icon: Store, label: "My Store", href: "/vendor/store" },
 ];
+
+function VendorNav({
+  pathname,
+  onNavigate,
+  dark = false,
+}: {
+  pathname: string;
+  onNavigate?: () => void;
+  dark?: boolean;
+}) {
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+  const user = useAppSelector(selectCurrentUser);
+
+  const firstName = user?.accountInfo?.firstName ?? "";
+  const lastName = user?.accountInfo?.lastName ?? "";
+  const avatarLetter = firstName.charAt(0).toUpperCase() || "V";
+
+  const handleLogout = async () => {
+    await logout();
+    dispatch(setLogout());
+    toast.success("Logged out");
+    router.push("/login");
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Logo */}
+      {dark ? (
+        <div className="p-5 border-b border-gray-800">
+          <div className="font-display font-bold text-xl">
+            <span className="text-white">Elite</span>
+            <span className="text-primary"> Vendor</span>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 border-b border-gray-100">
+          <Link href="/" onClick={onNavigate}>
+            <Logo size="sm" />
+          </Link>
+          <p className="text-xs text-gray-400 mt-0.5 font-medium">
+            Vendor Panel
+          </p>
+        </div>
+      )}
+
+      {/* Nav */}
+      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+        {VENDOR_NAV.map((item) => {
+          const isActive = pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              className={`
+                flex items-center gap-3 px-3 py-2.5 rounded-xl
+                text-sm font-medium transition-all duration-200
+                ${
+                  dark
+                    ? isActive
+                      ? "bg-primary text-white"
+                      : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                    : isActive
+                      ? "bg-primary-pale text-primary"
+                      : "text-gray-600 hover:bg-gray-50"
+                }
+              `}
+            >
+              <item.icon
+                size={16}
+                className={dark && !isActive ? "text-gray-400" : ""}
+              />
+              <span className="flex-1">{item.label}</span>
+              {isActive && !dark && (
+                <ChevronRight size={14} className="text-primary" />
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* User + logout */}
+      <div
+        className={`p-4 border-t ${dark ? "border-gray-800" : "border-gray-100"}`}
+      >
+        <div className="flex items-center gap-3 mb-3 px-1">
+          <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white text-xs font-bold shrink-0">
+            {avatarLetter}
+          </div>
+          <div className="min-w-0">
+            <p
+              className={`text-xs font-medium truncate ${dark ? "text-white" : "text-gray-900"}`}
+            >
+              {firstName} {lastName}
+            </p>
+            <p
+              className={`text-xs truncate ${dark ? "text-gray-500" : "text-gray-400"}`}
+            >
+              {user?.role?.toLowerCase()}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleLogout}
+          className={`
+            w-full flex items-center gap-2 px-3 py-2 rounded-xl
+            text-sm transition-all
+            ${
+              dark
+                ? "text-gray-400 hover:bg-gray-800 hover:text-red-400"
+                : "text-red-500 hover:bg-red-50"
+            }
+          `}
+        >
+          <LogOut size={15} />
+          Logout
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function VendorLayout({
   children,
@@ -77,157 +162,74 @@ export default function VendorLayout({
   children: React.ReactNode;
 }) {
   const user = useAppSelector(selectCurrentUser);
-
-  const dispatch = useAppDispatch();
-
-  const router = useRouter();
-
   const pathname = usePathname();
+  const router = useRouter();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // protect vendor routes
   useEffect(() => {
     if (!user) {
       router.replace("/login");
-
       return;
     }
-
-    const isAllowed =
-      user.role === "VENDOR" ||
-      user.role === "ADMIN" ||
-      user.role === "SUPER_ADMIN";
-
-    if (!isAllowed) {
-      router.replace("/");
-    }
+    const allowed = ["VENDOR", "ADMIN", "SUPER_ADMIN"].includes(user.role);
+    if (!allowed) router.replace("/");
   }, [user, router]);
 
-  const handleLogout = async () => {
-    try {
-      const res = await logout();
+  // Close drawer on route change
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
 
-      if (res?.success) {
-        dispatch(setLogout());
-
-        toast.success("Logged out successfully");
-
-        router.push("/login");
-
-        router.refresh();
-      } else {
-        toast.error("Logout failed");
-      }
-    } catch {
-      toast.error("Something went wrong");
-    }
-  };
-
-  // prevent flicker
   if (!user) return null;
+  const allowed = ["VENDOR", "ADMIN", "SUPER_ADMIN"].includes(user.role);
+  if (!allowed) return null;
 
-  const isAllowed =
-    user.role === "VENDOR" ||
-    user.role === "ADMIN" ||
-    user.role === "SUPER_ADMIN";
-
-  if (!isAllowed) return null;
-
-  const firstName = user.accountInfo?.firstName ?? "";
-
-  const lastName = user.accountInfo?.lastName ?? "";
-
-  const avatarLetter = firstName?.charAt(0)?.toUpperCase() ?? "V";
+  const currentLabel =
+    VENDOR_NAV.find((n) => pathname.startsWith(n.href))?.label ?? "Dashboard";
 
   return (
     <SocketProvider>
       <div className="min-h-screen bg-gray-50 flex">
-        {/* Sidebar */}
-        <aside
-          className="hidden lg:flex w-60 bg-white border-r
-                     border-gray-100 flex-col sticky top-0
-                     h-screen overflow-y-auto"
+        {/* Mobile sidebar drawer */}
+        <MobileSidebarDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          title="Vendor Panel"
         >
-          <div className="p-5 border-b border-gray-100">
-            <Link href="/">
-              <Logo size="sm" />
-            </Link>
+          <VendorNav
+            pathname={pathname}
+            onNavigate={() => setDrawerOpen(false)}
+          />
+        </MobileSidebarDrawer>
 
-            <p className="text-xs text-gray-400 mt-1 font-medium">
-              Vendor Panel
-            </p>
-          </div>
-
-          <nav className="flex-1 p-4 space-y-1">
-            {VENDOR_NAV.map((item) => {
-              const isActive = pathname.startsWith(item.href);
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5
-                             rounded-xl text-sm font-medium
-                             transition-all duration-200
-                             ${
-                               isActive
-                                 ? "bg-primary-pale text-primary"
-                                 : "text-gray-600 hover:bg-gray-50"
-                             }`}
-                >
-                  <item.icon
-                    size={16}
-                    className={isActive ? "text-primary" : "text-gray-400"}
-                  />
-
-                  <span className="flex-1">{item.label}</span>
-
-                  {isActive && (
-                    <ChevronRight size={14} className="text-primary" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Logout */}
-          <div className="p-4 border-t border-gray-100">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2.5
-                         rounded-xl text-sm text-red-500
-                         hover:bg-red-50 transition-all"
-            >
-              <LogOut size={16} />
-              Logout
-            </button>
-          </div>
+        {/* Desktop sidebar */}
+        <aside className="hidden lg:flex w-60 bg-white border-r border-gray-100 flex-col sticky top-0 h-screen overflow-y-auto">
+          <VendorNav pathname={pathname} />
         </aside>
 
-        {/* Main Content */}
+        {/* Main */}
         <div className="flex-1 flex flex-col min-w-0">
-          <header
-            className="bg-white border-b border-gray-100
-                       px-6 py-4 flex items-center
-                       justify-between"
-          >
-            <h1 className="font-display font-semibold text-gray-900">
-              {VENDOR_NAV.find((n) => pathname.startsWith(n.href))?.label ??
-                "Dashboard"}
-            </h1>
-
-            <div className="flex items-center gap-3 text-sm text-gray-500">
-              <div
-                className="w-7 h-7 rounded-full bg-gradient-primary
-                           flex items-center justify-center
-                           text-white text-xs font-bold"
+          {/* Header */}
+          <header className="bg-white border-b border-gray-100 px-4 lg:px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+            <div className="flex items-center gap-3">
+              {/* Mobile hamburger */}
+              <button
+                onClick={() => setDrawerOpen(true)}
+                className="lg:hidden p-2 -ml-1 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
+                aria-label="Open menu"
               >
-                {avatarLetter}
-              </div>
-
-              <span className="font-medium">
-                {firstName} {lastName}
-              </span>
+                <Menu size={20} />
+              </button>
+              <h1 className="font-display font-semibold text-gray-900 text-base">
+                {currentLabel}
+              </h1>
             </div>
+            <Link
+              href="/"
+              className="text-xs text-gray-400 hover:text-primary transition-colors"
+            >
+              ← Back to store
+            </Link>
           </header>
 
           <motion.main
@@ -235,7 +237,7 @@ export default function VendorLayout({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
-            className="flex-1 p-6 overflow-auto"
+            className="flex-1 p-4 lg:p-6 overflow-auto"
           >
             {children}
           </motion.main>

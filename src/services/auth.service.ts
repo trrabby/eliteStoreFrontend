@@ -84,7 +84,7 @@ export const loginViaProvider = async (
 };
 
 // logout
-export const logout = async () => {
+export const serverLogout = async () => {
   try {
     // notify backend to delete session
     await fetchWithAuth("/auth/logout", { method: "POST" });

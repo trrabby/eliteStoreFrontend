@@ -2,7 +2,7 @@
 
 import { buildQuery } from "@/lib/utils/buildQuery";
 
-import { fetchWithAuth } from "./helpers";
+import { fetchPublic, fetchWithAuth } from "./helpers";
 
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 
@@ -12,6 +12,7 @@ import type {
   RegisterPayload,
   IUserResponse,
 } from "@/types/user.types";
+import { config } from "@/config";
 
 // ======================================
 // REGISTER
@@ -92,7 +93,9 @@ export const getAllUsers = async (
 export const getUserByEmail = async (
   email: string,
 ): Promise<ApiResponse<IUser>> => {
-  return fetchWithAuth(`/users/by-email/${email}`);
+  const res = await fetch(`${config().Backend_URL}/users/by-email/${email}`);
+  // console.log("getUserByEmail response:", res);
+  return res.json();
 };
 
 export const makeAdmin = async (

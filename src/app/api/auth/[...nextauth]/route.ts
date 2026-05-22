@@ -59,11 +59,11 @@ const authOptions: NextAuthOptions = {
         //   "TOKEN:",
         //   providerToken,
         //   "user",
-        //   user
+        //   user,
         // );
 
         const existingUser = await getUserByEmail(user.email as string);
-
+        // console.log("Existing User:", existingUser);
         // Auto-register if user doesn’t exist
         if (!existingUser?.data && user?.email && providerToken) {
           let registerEndpoint = "";
@@ -119,7 +119,7 @@ const authOptions: NextAuthOptions = {
           });
 
           const data = await response.json();
-          // console.log("Login response from backend:", data);
+          console.log("Login response from backend:", data);
 
           if (data?.data?.accessToken && data?.data?.refreshToken) {
             token.accessToken = data.data.accessToken;

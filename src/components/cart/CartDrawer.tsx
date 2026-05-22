@@ -125,7 +125,14 @@ export function CartDrawer() {
                 <div className="py-2">
                   <AnimatePresence mode="popLayout">
                     {items.map((item) => (
-                      <CartItem key={item.variantId} item={item} />
+                      <CartItem
+                        key={item.variantId}
+                        item={{
+                          ...item,
+                          price: item?.variant?.price || 0,
+                          comparePrice: item?.variant?.comparePrice || 0,
+                        }}
+                      />
                     ))}
                   </AnimatePresence>
                 </div>

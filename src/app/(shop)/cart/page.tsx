@@ -13,7 +13,6 @@ import { CartItem } from "@/components/cart/CartItem";
 import { formatBDT } from "@/lib/utils/currency";
 import { MagneticButton } from "@/components/shared/MagneticButton";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
-import { motion as m } from "framer-motion";
 import dynamic from "next/dynamic";
 
 const Player = dynamic(
@@ -109,7 +108,14 @@ export default function CartPage() {
           <div className="card overflow-hidden">
             <AnimatePresence mode="popLayout">
               {items.map((item) => (
-                <CartItem key={item.variantId} item={item} />
+                <CartItem
+                  key={item.variantId}
+                  item={{
+                    ...item,
+                    price: item?.variant?.price || 0,
+                    comparePrice: item?.variant?.comparePrice || 0,
+                  }}
+                />
               ))}
             </AnimatePresence>
           </div>

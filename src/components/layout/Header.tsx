@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
@@ -20,7 +21,17 @@ import { usePathname } from "next/navigation";
 import { CartDrawer } from "../cart/CartDrawer";
 import Image from "next/image";
 import { useAppSelector } from "@/store/hook";
-import { selectCurrentUser } from "@/store/slices/authSlice";
+import { selectCurrentUser, setUser } from "@/store/slices/authSlice";
+import { useSession } from "next-auth/react";
+import { getMyProfile, getUserByEmail } from "@/services/user.service";
+import { toast } from "sonner";
+import { normalizeUser } from "@/lib/utils/normalizeUser";
+import { getCart } from "@/services/cart.service";
+import { getWishlist } from "@/services/wishlist.service";
+import { getMyNotifications } from "@/services/notification.service";
+import { setCart } from "@/store/slices/cartSlice";
+import { setNotifications } from "@/store/slices/notificationSlice";
+import { setWishlist } from "@/store/slices/wishlistSlice";
 
 export function Header() {
   const dispatch = useDispatch();
@@ -29,6 +40,37 @@ export function Header() {
   const cart = useSelector((state: RootState) => state.cart);
   const isSearchOpen = useSelector((state: RootState) => state.ui.isSearchOpen);
   const user = useAppSelector(selectCurrentUser);
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    const syncReduxUser = async () => {
+      if (status === "authenticated" && session?.user?.email) {
+        // fetch profile
+        const profileResponse = await getMyProfile();
+        // console.log(profileResponse);
+        if (!profileResponse?.success) {
+          toast.error("Failed to retrieve user profile");
+          return;
+        }
+
+        const reduxUser = normalizeUser(profileResponse as any);
+        const cart = await getCart();
+        const cartInfo = cart.data;
+        const wishlist = await getWishlist();
+        const notifications = await getMyNotifications({});
+
+        // hydrate redux
+        dispatch(setUser({ user: reduxUser }));
+        dispatch(setCart(cartInfo));
+        dispatch(setNotifications(notifications.data));
+        const productIds = (wishlist.data?.items ?? []).map(
+          (item: any) => item.productId,
+        );
+        dispatch(setWishlist(productIds));
+      }
+    };
+    syncReduxUser();
+  }, [session, status, dispatch]);
 
   const totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 

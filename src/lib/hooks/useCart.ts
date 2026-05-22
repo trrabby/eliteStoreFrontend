@@ -229,9 +229,6 @@ export const useCart = () => {
     }
   };
 
-  // Calculate item count (already in slice, but providing for convenience)
-  const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
-
   // Helper to get formatted price for display
   const getItemPrice = (item: (typeof cart.items)[0]) => {
     return toNumber(item.variant.price);
