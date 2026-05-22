@@ -8,14 +8,15 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { FormInput } from "@/components/shared/FormInput";
-import { addAddress } from "@/services/user.service";
+import { addAddress, updateAddress } from "@/services/user.service";
+import type { IAddress } from "@/types/user.types";
 
 const schema = z.object({
-  fullName: z.string().min(2, "Full name is required"),
-  phone: z.string().min(10, "Valid phone required"),
-  addressLine1: z.string().min(5, "Address is required"),
+  fullName: z.string().min(2),
+  phone: z.string().min(10),
+  addressLine1: z.string().min(5),
   addressLine2: z.string().optional(),
-  city_district: z.string().min(2, "City/District is required"),
+  city_district: z.string().min(2),
   postalCode: z.string().optional(),
   landmark: z.string().optional(),
   label: z.string().optional(),
@@ -27,31 +28,51 @@ type FormData = z.infer<typeof schema>;
 export function AddressFormModal({
   onClose,
   onSaved,
+  editAddress,
 }: {
   onClose: () => void;
   onSaved: () => void;
+  editAddress?: IAddress;
 }) {
   const [loading, setLoading] = useState(false);
+  const isEdit = !!editAddress;
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormData>({ resolver: zodResolver(schema) });
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: editAddress
+      ? {
+          fullName: editAddress.fullName,
+          phone: editAddress.phone,
+          addressLine1: editAddress.addressLine1,
+          addressLine2: editAddress.addressLine2 ?? "",
+          city_district: editAddress.city_district,
+          postalCode: editAddress.postalCode ?? "",
+          landmark: editAddress.landmark ?? "",
+          label: editAddress.label ?? "",
+          isDefault: editAddress.isDefault ?? false,
+        }
+      : undefined,
+  });
 
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append("data", JSON.stringify({ ...data, country: "BD" }));
-      const res = await addAddress(formData);
+      const fd = new FormData();
+      fd.append("data", JSON.stringify({ ...data, country: "BD" }));
+
+      const res = isEdit
+        ? await updateAddress(editAddress!.id, fd)
+        : await addAddress(fd);
 
       if (!res?.success) {
-        toast.error(res?.message ?? "Failed to add address.");
+        toast.error(res?.message ?? "Failed.");
         return;
       }
-
-      toast.success("Address added!");
+      toast.success(isEdit ? "Address updated!" : "Address added!");
       onSaved();
     } catch {
       toast.error("Something went wrong.");
@@ -62,7 +83,6 @@ export function AddressFormModal({
 
   return (
     <>
-      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -70,8 +90,6 @@ export function AddressFormModal({
         onClick={onClose}
         className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
       />
-
-      {/* Modal */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -82,7 +100,7 @@ export function AddressFormModal({
       >
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-display font-bold text-gray-900 text-lg">
-            Add New Address
+            {isEdit ? "Edit Address" : "Add New Address"}
           </h3>
           <button
             onClick={onClose}
@@ -109,21 +127,18 @@ export function AddressFormModal({
               {...register("phone")}
             />
           </div>
-
           <FormInput
             label="Address Line 1"
-            placeholder="House/Flat, Road, Block"
+            placeholder="House, Road, Block"
             error={errors.addressLine1?.message}
             required
             {...register("addressLine1")}
           />
-
           <FormInput
             label="Address Line 2 (optional)"
-            placeholder="Area, neighbourhood"
+            placeholder="Area"
             {...register("addressLine2")}
           />
-
           <div className="grid grid-cols-2 gap-3">
             <FormInput
               label="City / District"
@@ -138,7 +153,6 @@ export function AddressFormModal({
               {...register("postalCode")}
             />
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <FormInput
               label="Landmark (optional)"
@@ -146,12 +160,11 @@ export function AddressFormModal({
               {...register("landmark")}
             />
             <FormInput
-              label="Address Alias (Optional)"
-              placeholder="My Home | My Office"
+              label="Label (optional)"
+              placeholder="Home / Office"
               {...register("label")}
             />
           </div>
-
           <label className="flex items-center gap-2.5 cursor-pointer">
             <input
               type="checkbox"
@@ -162,20 +175,19 @@ export function AddressFormModal({
               Set as default address
             </span>
           </label>
-
           <button
             type="submit"
             disabled={loading}
-            className="w-full btn-primary py-3.5 flex items-center
-                       justify-center gap-2 mt-2 disabled:opacity-60"
+            className="w-full btn-primary py-3.5 flex items-center justify-center gap-2 mt-2 disabled:opacity-60"
           >
             {loading ? (
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-                className="w-5 h-5 border-2 border-white/30
-                           border-t-white rounded-full"
+                className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
               />
+            ) : isEdit ? (
+              "Save Changes"
             ) : (
               "Save Address"
             )}

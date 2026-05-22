@@ -60,10 +60,9 @@ export default function AccountLayout({
 
     if (res.success) {
       dispatch(setLogout());
+      toast.success("Logged out successfully");
       router.push("/login");
     }
-
-    toast.info(res.success ?? "Logged out");
   };
   return (
     <SocketProvider>
