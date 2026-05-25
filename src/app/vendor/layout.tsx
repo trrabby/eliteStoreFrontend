@@ -21,9 +21,9 @@ import { Logo } from "@/components/shared/Logo";
 import { NotificationToast } from "@/components/shared/NotificationToast";
 import { SocketProvider } from "@/components/providers/SocketProvider";
 import { MobileSidebarDrawer } from "@/components/shared/MobileSidebarDrawer";
-import { logout } from "@/services/auth.service";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import { setLogout, selectCurrentUser } from "@/store/slices/authSlice";
+import { useLogout } from "@/lib/hooks/useLogout";
 
 const VENDOR_NAV = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/vendor/dashboard" },
@@ -50,14 +50,14 @@ function VendorNav({
   const firstName = user?.accountInfo?.firstName ?? "";
   const lastName = user?.accountInfo?.lastName ?? "";
   const avatarLetter = firstName.charAt(0).toUpperCase() || "V";
+  const logout = useLogout();
 
   const handleLogout = async () => {
     await logout();
     dispatch(setLogout());
-    toast.success("Logged out");
+    toast.info("Logged out");
     router.push("/login");
   };
-
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
@@ -97,8 +97,8 @@ function VendorNav({
                       ? "bg-primary text-white"
                       : "text-gray-400 hover:bg-gray-800 hover:text-white"
                     : isActive
-                      ? "bg-primary-pale text-primary"
-                      : "text-gray-600 hover:bg-gray-50"
+                    ? "bg-primary-pale text-primary"
+                    : "text-gray-600 hover:bg-gray-50"
                 }
               `}
             >
@@ -117,7 +117,9 @@ function VendorNav({
 
       {/* User + logout */}
       <div
-        className={`p-4 border-t ${dark ? "border-gray-800" : "border-gray-100"}`}
+        className={`p-4 border-t ${
+          dark ? "border-gray-800" : "border-gray-100"
+        }`}
       >
         <div className="flex items-center gap-3 mb-3 px-1">
           <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white text-xs font-bold shrink-0">
@@ -125,12 +127,16 @@ function VendorNav({
           </div>
           <div className="min-w-0">
             <p
-              className={`text-xs font-medium truncate ${dark ? "text-white" : "text-gray-900"}`}
+              className={`text-xs font-medium truncate ${
+                dark ? "text-white" : "text-gray-900"
+              }`}
             >
               {firstName} {lastName}
             </p>
             <p
-              className={`text-xs truncate ${dark ? "text-gray-500" : "text-gray-400"}`}
+              className={`text-xs truncate ${
+                dark ? "text-gray-500" : "text-gray-400"
+              }`}
             >
               {user?.role?.toLowerCase()}
             </p>

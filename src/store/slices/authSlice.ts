@@ -8,6 +8,9 @@ export interface IAccountInfo {
   lastName: string;
   displayName: string | null;
   avatar: string | null;
+  bio: string | null;
+  dateOfBirth: string | null;
+  gender: "MALE" | "FEMALE" | "OTHER" | null;
 }
 
 export interface IAddress {
