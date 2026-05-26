@@ -62,8 +62,9 @@ function AccountNav({
     router.push("/login");
   };
 
-  const initials =
-    `${user?.accountInfo?.firstName?.[0] ?? ""}${user?.accountInfo?.lastName?.[0] ?? ""}`.toUpperCase();
+  const initials = `${user?.accountInfo?.firstName?.[0] ?? ""}${
+    user?.accountInfo?.lastName?.[0] ?? ""
+  }`.toUpperCase();
 
   return (
     <div className="flex flex-col h-full">
@@ -103,7 +104,7 @@ function AccountNav({
               onClick={onNavigate}
               className={`
                 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
-                transition-all duration-200
+                transition-all duration-200 cursor-pointer
                 ${
                   isActive
                     ? "bg-primary-pale text-primary"
@@ -149,7 +150,7 @@ function AccountNav({
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
                      text-sm font-medium text-red-500 hover:bg-red-50
-                     transition-all duration-200"
+                     transition-all duration-200 cursor-pointer"
         >
           <LogOut size={16} />
           Logout
@@ -203,7 +204,7 @@ export default function AccountLayout({
               <button
                 onClick={() => setDrawerOpen(true)}
                 className="lg:hidden p-2 -ml-1 rounded-xl text-gray-500
-                           hover:bg-gray-100 transition-colors"
+                           hover:bg-gray-100 transition-colors cursor-pointer"
                 aria-label="Open account menu"
               >
                 <Menu size={20} />

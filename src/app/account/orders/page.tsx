@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Package, ChevronRight, Search, Filter } from "lucide-react";
+import { Package, ChevronRight, Search } from "lucide-react";
 import { getMyOrders } from "@/services/order.service";
 import { formatBDT } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/date";
@@ -98,7 +98,7 @@ export default function OrdersPage() {
               setPage(1);
             }}
             className={cn(
-              "shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all",
+              "shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer",
               activeTab === tab
                 ? "bg-primary text-white shadow-pink"
                 : "bg-white border border-gray-200 text-gray-600 hover:border-primary",

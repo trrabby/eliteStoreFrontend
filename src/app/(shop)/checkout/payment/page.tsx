@@ -1,20 +1,34 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react/no-unescaped-entities */
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Tag, X, Check } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ChevronLeft,
+  Shield,
+  CreditCard,
+  Smartphone,
+  Banknote,
+  Check,
+  Clock,
+  ArrowRight,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAppSelector, useAppDispatch } from "@/store/hook";
 import { selectCurrentUser } from "@/store/slices/authSlice";
 import {
   selectCheckout,
   setPaymentMethod,
-  applyCouponSuccess,
-  removeCoupon,
+  setPlacedOrder,
+  resetCheckout,
 } from "@/store/slices/checkoutSlice";
+import { clearCart } from "@/store/slices/cartSlice";
 import { useCart } from "@/lib/hooks/useCart";
-import { applyCoupon } from "@/services/coupon.service";
+import { createOrder } from "@/services/order.service";
+import { initiatePayment } from "@/services/payment.service";
 import { CheckoutProgress } from "@/components/checkout/CheckoutProgress";
 import { MagneticButton } from "@/components/shared/MagneticButton";
 import { formatBDT } from "@/lib/utils/currency";
@@ -24,30 +38,29 @@ const PAYMENT_METHODS = [
   {
     id: "CASH_ON_DELIVERY",
     label: "Cash on Delivery",
-    desc: "Pay when your order arrives",
-    icon: "💵",
-    badge: "Most Popular",
+    desc: "Pay securely when your order arrives",
+    icon: Banknote,
+    badge: "No Extra Fee",
+    color: "from-green-500 to-emerald-600",
+    bgLight: "bg-green-50",
   },
   {
-    id: "SSLCOMMERZ",
-    label: "Card / Net Banking",
-    desc: "Visa, Mastercard, all banks",
-    icon: "💳",
-    badge: null,
+    id: "CREDIT_CARD",
+    label: "Card Payment",
+    desc: "Visa, Mastercard, Amex & more",
+    icon: CreditCard,
+    badge: "Secure",
+    color: "from-blue-500 to-indigo-600",
+    bgLight: "bg-blue-50",
   },
   {
-    id: "BKASH",
-    label: "bKash",
-    desc: "Pay with your bKash account",
-    icon: "📱",
-    badge: null,
-  },
-  {
-    id: "NAGAD",
-    label: "Nagad",
-    desc: "Pay with your Nagad account",
-    icon: "📱",
-    badge: null,
+    id: "MOBILE_BANKING",
+    label: "bKash / Nagad",
+    desc: "Pay with mobile wallet",
+    icon: Smartphone,
+    badge: "Fast",
+    color: "from-pink-500 to-rose-600",
+    bgLight: "bg-pink-50",
   },
 ];
 
@@ -56,13 +69,12 @@ export default function CheckoutPaymentPage() {
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectCurrentUser);
   const checkout = useAppSelector(selectCheckout);
-  const { subtotal, savings } = useCart();
+  const { items, subtotal } = useCart();
 
-  const [method, setMethod] = useState<string>(
-    checkout.paymentMethod ?? "CASH_ON_DELIVERY",
-  );
-  const [couponInput, setCouponInput] = useState(checkout.couponCode ?? "");
-  const [applying, setApplying] = useState(false);
+  const [method, setMethod] = useState<string>("CASH_ON_DELIVERY");
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [processing, setProcessing] = useState(false);
+  const [mobileError, setMobileError] = useState("");
 
   useEffect(() => {
     if (!user) {
@@ -75,237 +87,340 @@ export default function CheckoutPaymentPage() {
     }
   }, [user, checkout.selectedAddressId]);
 
-  const handleApplyCoupon = async () => {
-    if (!couponInput.trim()) return;
-    setApplying(true);
+  const validateMobileNumber = (number: string) => {
+    const bangladeshMobileRegex = /^(01[3-9]\d{8})$/;
+    if (!bangladeshMobileRegex.test(number)) {
+      setMobileError(
+        "Enter a valid Bangladesh mobile number (e.g., 01XXXXXXXXX)",
+      );
+      return false;
+    }
+    setMobileError("");
+    return true;
+  };
+
+  const handlePlaceOrderAndPay = async () => {
+    if (!checkout.selectedAddressId) {
+      toast.error("Address not selected");
+      router.push("/checkout");
+      return;
+    }
+
+    // Validate mobile number for mobile banking
+    if (method === "MOBILE_BANKING") {
+      if (!mobileNumber) {
+        toast.error("Please enter your mobile number");
+        return;
+      }
+      if (!validateMobileNumber(mobileNumber)) {
+        toast.error(mobileError);
+        return;
+      }
+    }
+
+    setProcessing(true);
+
     try {
-      const fd = new FormData();
-      fd.append(
+      // Step 1: Create order
+      const orderFd = new FormData();
+      orderFd.append(
         "data",
         JSON.stringify({
-          code: couponInput.trim(),
-          orderSubtotal: subtotal,
+          shippingAddressId: checkout.selectedAddressId,
+          couponCode: checkout.couponCode ?? undefined,
+          notes: checkout.notes || undefined,
         }),
       );
-      const res = await applyCoupon(fd);
 
-      if (!res?.success) {
-        toast.error(res?.message ?? "Invalid or expired coupon.");
+      const orderRes = await createOrder(orderFd);
+
+      if (!orderRes?.success) {
+        toast.error(orderRes?.message ?? "Failed to create order.");
+        setProcessing(false);
         return;
       }
 
+      const { id: orderId, publicId, orderNumber } = orderRes.data;
+
+      // Step 2: Initiate payment
+      const payFd = new FormData();
+      const paymentPayload: any = {
+        orderId,
+        method: method,
+      };
+
+      if (method === "MOBILE_BANKING" && mobileNumber) {
+        paymentPayload.mobileNumber = mobileNumber;
+      }
+
+      payFd.append("data", JSON.stringify(paymentPayload));
+
+      const payRes = await initiatePayment(payFd);
+
+      if (!payRes?.success) {
+        toast.error(payRes?.message ?? "Payment initiation failed.");
+        setProcessing(false);
+        return;
+      }
+
+      // Store order info
       dispatch(
-        applyCouponSuccess({
-          code: couponInput.trim(),
-          discount: res.data.discountAmount ?? 0,
-          couponId: res.data.couponId,
-        }),
+        setPlacedOrder({ orderId, orderPublicId: publicId, orderNumber }),
       );
-      toast.success(
-        `Coupon applied! You save ${formatBDT(res.data.discountAmount)}`,
-      );
-    } catch {
-      toast.error("Failed to apply coupon.");
+
+      // Clear cart and checkout state
+      dispatch(clearCart());
+      dispatch(resetCheckout());
+
+      // Handle based on payment method
+      if (method === "CASH_ON_DELIVERY") {
+        router.push(`/payment/success?order=${orderNumber}`);
+      } else if (payRes.data?.redirectUrl) {
+        window.location.href = payRes.data.redirectUrl;
+      } else {
+        router.push(`/payment/success?order=${orderNumber}`);
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast.error("Something went wrong. Please try again.");
     } finally {
-      setApplying(false);
+      setProcessing(false);
     }
-  };
-
-  const handleRemoveCoupon = () => {
-    dispatch(removeCoupon());
-    setCouponInput("");
-  };
-
-  const handleContinue = () => {
-    dispatch(setPaymentMethod(method));
-    router.push("/checkout/review");
   };
 
   const shippingFee = subtotal >= 1000 ? 0 : 60;
   const discount = checkout.couponDiscount ?? 0;
-  const total = subtotal + shippingFee - discount;
+  const total = Math.max(0, subtotal + shippingFee - discount);
 
   if (!user) return null;
 
   return (
-    <div className="container-elite py-6 max-w-2xl">
-      <CheckoutProgress />
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="container-elite py-6 max-w-2xl">
+        <CheckoutProgress />
 
-      <div className="space-y-4">
-        {/* Payment method */}
-        <div className="card p-6">
-          <h2
-            className="font-display text-xl font-bold text-gray-900 mb-5
-                         flex items-center gap-2"
+        <div className="space-y-5">
+          {/* Order Summary Banner */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 to-primary/5 p-4"
           >
-            💳 Payment Method
-          </h2>
-
-          <div className="space-y-3">
-            {PAYMENT_METHODS.map((pm) => (
-              <motion.button
-                key={pm.id}
-                whileTap={{ scale: 0.99 }}
-                onClick={() => setMethod(pm.id)}
-                className={cn(
-                  "w-full text-left p-4 rounded-2xl border-2 transition-all",
-                  method === pm.id
-                    ? "border-primary bg-primary-pale"
-                    : "border-gray-200 hover:border-gray-300",
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-600">Order Total</p>
+                <p className="text-2xl font-bold text-primary">
+                  {formatBDT(total)}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-600">{items.length} items</p>
+                {discount > 0 && (
+                  <p className="text-xs text-green-600">
+                    Saved {formatBDT(discount)}
+                  </p>
                 )}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{pm.icon}</span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900 text-sm">
-                          {pm.label}
-                        </span>
-                        {pm.badge && (
-                          <span
-                            className="text-xs bg-primary text-white
-                                           px-2 py-0.5 rounded-full"
-                          >
-                            {pm.badge}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-0.5">{pm.desc}</p>
-                    </div>
-                  </div>
+              </div>
+            </div>
+          </motion.div>
 
-                  <div
+          {/* Payment Method Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm transition-all hover:shadow-md"
+          >
+            <div className="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white p-6">
+              <div className="flex items-center gap-2">
+                <div className="rounded-xl bg-primary/10 p-2">
+                  <CreditCard size={18} className="text-primary" />
+                </div>
+                <h2 className="font-display text-xl font-bold text-gray-900">
+                  Select Payment Method
+                </h2>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Choose how you'd like to pay for your order
+              </p>
+            </div>
+
+            <div className="p-6 pt-4">
+              <div className="space-y-3">
+                {PAYMENT_METHODS.map((pm, index) => (
+                  <motion.button
+                    key={pm.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    onClick={() => setMethod(pm.id)}
                     className={cn(
-                      "w-5 h-5 rounded-full border-2 flex items-center",
-                      "justify-center flex-shrink-0 transition-all",
+                      "group relative w-full overflow-hidden rounded-2xl border-2 p-4 text-left transition-all duration-200",
                       method === pm.id
-                        ? "border-primary bg-primary"
-                        : "border-gray-300",
+                        ? "border-primary/50 bg-gradient-to-r from-primary/5 to-transparent shadow-md"
+                        : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm",
                     )}
                   >
-                    {method === pm.id && (
-                      <Check size={11} className="text-white" />
-                    )}
-                  </div>
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </div>
+                    <div
+                      className={cn(
+                        "absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all",
+                        method === pm.id
+                          ? "border-primary bg-primary"
+                          : "border-gray-300 bg-white",
+                      )}
+                    >
+                      {method === pm.id && (
+                        <Check size={10} className="text-white" />
+                      )}
+                    </div>
 
-        {/* Coupon */}
-        <div className="card p-6">
-          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Tag size={16} className="text-primary" />
-            Promo Code
-          </h3>
+                    <div className="flex items-start gap-3 pr-6">
+                      <div
+                        className={cn(
+                          "flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200",
+                          method === pm.id
+                            ? `bg-gradient-to-br ${pm.color} text-white shadow-sm`
+                            : "bg-gray-100 text-gray-600 group-hover:bg-gray-200",
+                        )}
+                      >
+                        <pm.icon size={20} />
+                      </div>
 
-          {checkout.couponCode ? (
-            <div
-              className="flex items-center justify-between bg-green-50
-                            border border-green-200 rounded-xl p-3"
-            >
-              <div>
-                <p className="text-sm font-semibold text-green-700">
-                  {checkout.couponCode}
-                </p>
-                <p className="text-xs text-green-600">
-                  You save {formatBDT(checkout.couponDiscount)}
-                </p>
-              </div>
-              <button
-                onClick={handleRemoveCoupon}
-                className="p-1.5 text-red-400 hover:text-red-600
-                           hover:bg-red-50 rounded-lg transition-all"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <input
-                value={couponInput}
-                onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
-                placeholder="Enter coupon code"
-                className="flex-1 border border-gray-200 rounded-xl px-4
-                           py-3 text-sm outline-none focus:border-primary
-                           focus:ring-2 focus:ring-primary/20 uppercase
-                           tracking-wider"
-              />
-              <button
-                onClick={handleApplyCoupon}
-                disabled={applying || !couponInput.trim()}
-                className="btn-primary px-5 py-3 text-sm disabled:opacity-60"
-              >
-                {applying ? "..." : "Apply"}
-              </button>
-            </div>
-          )}
-        </div>
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-base font-semibold text-gray-900">
+                            {pm.label}
+                          </span>
+                          {pm.badge && (
+                            <span
+                              className={cn(
+                                "rounded-full px-2 py-0.5 text-xs font-medium",
+                                method === pm.id
+                                  ? "bg-primary/10 text-primary"
+                                  : "bg-gray-100 text-gray-600",
+                              )}
+                            >
+                              {pm.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-xs text-gray-500">
+                          {pm.desc}
+                        </p>
+                      </div>
+                    </div>
 
-        {/* Price summary */}
-        <div className="card p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Price Details</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between text-gray-600">
-              <span>Subtotal</span>
-              <span>{formatBDT(subtotal)}</span>
-            </div>
-            {savings > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>Product discount</span>
-                <span>-{formatBDT(savings)}</span>
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  </motion.button>
+                ))}
               </div>
-            )}
-            {discount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>Coupon discount</span>
-                <span>-{formatBDT(discount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-gray-600">
-              <span>Shipping</span>
-              {subtotal >= 1000 ? (
-                <span className="text-green-600 font-medium">FREE</span>
-              ) : (
-                <span>{formatBDT(shippingFee)}</span>
-              )}
+
+              {/* Mobile Number Input for Mobile Banking */}
+              <AnimatePresence>
+                {method === "MOBILE_BANKING" && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-4 overflow-hidden"
+                  >
+                    <div className="rounded-xl bg-gray-50 p-4">
+                      <label className="mb-2 block text-sm font-medium text-gray-700">
+                        Mobile Number (bKash/Nagad)
+                      </label>
+                      <input
+                        type="tel"
+                        value={mobileNumber}
+                        onChange={(e) => {
+                          setMobileNumber(e.target.value);
+                          if (mobileError) validateMobileNumber(e.target.value);
+                        }}
+                        placeholder="01XXXXXXXXX"
+                        className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                      />
+                      {mobileError && (
+                        <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                          <AlertCircle size={12} />
+                          {mobileError}
+                        </p>
+                      )}
+                      <p className="mt-2 text-xs text-gray-400">
+                        You'll receive a payment request on this number
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            <div
-              className="flex justify-between font-bold text-gray-900
-                            text-base pt-2 border-t border-gray-100"
-            >
-              <span>Total</span>
-              <span className="text-primary">
-                {formatBDT(Math.max(0, total))}
+          </motion.div>
+
+          {/* Trust Badges */}
+          <div className="flex items-center justify-center gap-4 rounded-2xl bg-white p-4 shadow-sm">
+            <div className="flex items-center gap-2">
+              <Shield size={16} className="text-green-600" />
+              <span className="text-xs text-gray-600">Secure Payment</span>
+            </div>
+            <div className="h-4 w-px bg-gray-200" />
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-primary" />
+              <span className="text-xs text-gray-600">
+                Instant Confirmation
               </span>
             </div>
           </div>
-        </div>
 
-        {/* Navigation */}
-        <div className="flex gap-3">
-          <button
-            onClick={() => router.push("/checkout")}
-            className="flex items-center gap-2 px-5 py-3.5 rounded-xl
-                       border-2 border-gray-200 text-sm font-medium
-                       text-gray-600 hover:border-gray-300 transition-all"
-          >
-            <ChevronLeft size={16} />
-            Back
-          </button>
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-2">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => router.push("/checkout/review")}
+              className="flex cursor-pointer items-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-6 py-3.5 text-sm font-medium text-gray-600 transition-all hover:border-gray-300 hover:shadow-sm whitespace-nowrap"
+            >
+              <ChevronLeft size={16} />
+              Back to Review
+            </motion.button>
 
-          <MagneticButton
-            onClick={handleContinue}
-            strength={0.25}
-            className="flex-1 btn-primary py-3.5 flex items-center
-                       justify-center gap-2"
+            <MagneticButton
+              onClick={handlePlaceOrderAndPay}
+              disabled={processing}
+              strength={0.05}
+              className="flex w-full justify-center items-center btn-primary group py-3.5 text-base disabled:opacity-70"
+            >
+              {processing ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{
+                      duration: 0.8,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
+                    className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white"
+                  />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <>
+                  <span>Pay {formatBDT(total)}</span>
+                  <ArrowRight
+                    size={16}
+                    className="transition-transform group-hover:translate-x-0.5"
+                  />
+                </>
+              )}
+            </MagneticButton>
+          </div>
+
+          {/* Security Notice */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center text-xs text-gray-400"
           >
-            Review Order
-            <ChevronRight size={16} />
-          </MagneticButton>
+            🔒 Your payment information is protected with 256-bit SSL encryption
+          </motion.p>
         </div>
       </div>
     </div>

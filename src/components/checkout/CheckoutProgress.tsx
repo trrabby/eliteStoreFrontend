@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils/cn";
 
 const STEPS = [
   { label: "Address", href: "/checkout" },
-  { label: "Payment", href: "/checkout/payment" },
   { label: "Review", href: "/checkout/review" },
+  { label: "Payment", href: "/checkout/payment" },
 ];
 
 export function CheckoutProgress() {
@@ -33,8 +33,8 @@ export function CheckoutProgress() {
                   isDone
                     ? "bg-primary text-white"
                     : isActive
-                      ? "bg-primary text-white ring-4 ring-primary/20"
-                      : "bg-gray-100 text-gray-400",
+                    ? "bg-primary text-white ring-4 ring-primary/20"
+                    : "bg-gray-100 text-gray-400",
                 )}
               >
                 {isDone ? <Check size={16} /> : i + 1}
@@ -45,8 +45,8 @@ export function CheckoutProgress() {
                   isActive
                     ? "text-primary"
                     : isDone
-                      ? "text-gray-600"
-                      : "text-gray-400",
+                    ? "text-gray-600"
+                    : "text-gray-400",
                 )}
               >
                 {step.label}

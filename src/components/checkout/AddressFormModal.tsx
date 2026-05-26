@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
@@ -93,10 +94,13 @@ export function AddressFormModal({
   const isEdit = !!editAddress;
 
   /**
-   * LOCATION STATE (IMPORTANT FIX)
-   * You must not rely only on form state for geo data
+   * LOCATION STATE (OPTIONAL)
+   * Latitude and longitude are now optional
    */
-  const [location, setLocation] = useState({
+  const [location, setLocation] = useState<{
+    latitude: number | null;
+    longitude: number | null;
+  }>({
     latitude: editAddress?.latitude ? Number(editAddress.latitude) : null,
     longitude: editAddress?.longitude ? Number(editAddress.longitude) : null,
   });
@@ -157,10 +161,9 @@ export function AddressFormModal({
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        console.log({ position });
         const { latitude, longitude } = position.coords;
 
-        // Update location state
+        // Update location state (optional)
         setLocation({
           latitude: Number(latitude),
           longitude: Number(longitude),
@@ -227,13 +230,17 @@ export function AddressFormModal({
     setLoading(true);
 
     try {
-      const payload = {
+      // Only include latitude/longitude if they have values
+      const payload: any = {
         ...data,
         country: "BD",
-
-        latitude: Number(location.latitude) || null,
-        longitude: Number(location.longitude) || null,
       };
+
+      // Add coordinates only if they exist (optional)
+      if (location.latitude !== null && location.longitude !== null) {
+        payload.latitude = location.latitude;
+        payload.longitude = location.longitude;
+      }
 
       const fd = new FormData();
       fd.append("data", JSON.stringify(payload));
@@ -250,11 +257,18 @@ export function AddressFormModal({
       toast.success(isEdit ? "Address updated!" : "Address added!");
 
       onSaved();
-    } catch {
+    } catch (error) {
+      console.error("Submit error:", error);
       toast.error("Something went wrong.");
     } finally {
       setLoading(false);
     }
+  };
+
+  // Optional: Clear location coordinates
+  const clearLocation = () => {
+    setLocation({ latitude: null, longitude: null });
+    toast.info("Location coordinates cleared");
   };
 
   return (
@@ -368,10 +382,28 @@ export function AddressFormModal({
             <FormInput label="Label" {...register("label")} />
           </div>
 
-          {/* Show coordinates if available */}
-          {location.latitude && location.longitude && (
-            <div className="rounded-lg bg-gray-50 p-2 text-xs text-gray-500">
-              📍 Coordinates: {location.latitude}, {location.longitude}
+          {/* Show coordinates if available (optional) */}
+          {location.latitude !== null && location.longitude !== null && (
+            <div className="flex items-center justify-between rounded-lg bg-gray-50 p-2 text-xs text-gray-500">
+              <span>
+                📍 Coordinates: {location.latitude.toFixed(6)},{" "}
+                {location.longitude.toFixed(6)}
+              </span>
+              <button
+                type="button"
+                onClick={clearLocation}
+                className="ml-2 rounded-md px-2 py-0.5 text-xs text-red-500 hover:bg-red-50"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+
+          {/* Optional hint about location */}
+          {location.latitude === null && location.longitude === null && (
+            <div className="rounded-lg bg-blue-50 p-2 text-xs text-blue-600">
+              💡 Tip: Use the location button to automatically detect your
+              address and coordinates
             </div>
           )}
 

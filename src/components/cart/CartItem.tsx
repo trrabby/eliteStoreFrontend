@@ -5,6 +5,7 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/lib/hooks/useCart";
 import { formatBDT } from "@/lib/utils/currency";
+import Link from "next/link";
 
 type CartVariant = {
   id: number;
@@ -88,19 +89,30 @@ export function CartItem({ item }: CartItemProps) {
         className="relative w-20 h-20 rounded-xl overflow-hidden
                       shrink-0 bg-primary-pale"
       >
-        <Image
-          src={item.product.images[0]?.url || "/placeholder.png"}
-          alt={item.product.name}
-          fill
-          className="object-cover"
-          sizes="80px"
-        />
+        <Link href={`/products/${item.product.slug}`}>
+          <Image
+            src={item.product.images[0]?.url || "/placeholder.png"}
+            alt={item.product.name}
+            fill
+            className="object-cover"
+            sizes="80px"
+          />
+          <Image
+            src={item.product.images[0]?.url || "/placeholder.png"}
+            alt={item.product.name}
+            fill
+            className="object-cover"
+            sizes="80px"
+          />
+        </Link>
       </div>
 
       {/* Details */}
       <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-semibold text-gray-900 line-clamp-1">
-          {item.product.name}
+        <h4 className="text-sm font-semibold text-gray-900 line-clamp-1 hover:text-primary-dark">
+          <Link href={`/products/${item.product.slug}`}>
+            {item.product.name}
+          </Link>
         </h4>
         {item.variant.name && (
           <p className="text-xs text-gray-500 mt-0.5">{item.variant.name}</p>
