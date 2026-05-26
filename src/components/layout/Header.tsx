@@ -23,15 +23,21 @@ import Image from "next/image";
 import { useAppSelector } from "@/store/hook";
 import { selectCurrentUser, setUser } from "@/store/slices/authSlice";
 import { useSession } from "next-auth/react";
-import { getMyProfile, getUserByEmail } from "@/services/user.service";
+import { getMyProfile } from "@/services/user.service";
 import { toast } from "sonner";
 import { normalizeUser } from "@/lib/utils/normalizeUser";
 import { getCart } from "@/services/cart.service";
 import { getWishlist } from "@/services/wishlist.service";
 import { getMyNotifications } from "@/services/notification.service";
-import { setCart } from "@/store/slices/cartSlice";
+import {
+  setCart,
+  startSync,
+  syncError,
+  syncCartWithServer,
+} from "@/store/slices/cartSlice";
 import { setNotifications } from "@/store/slices/notificationSlice";
 import { setWishlist } from "@/store/slices/wishlistSlice";
+import { addToCart } from "@/services/cart.service";
 
 export function Header() {
   const dispatch = useDispatch();
@@ -40,36 +46,6 @@ export function Header() {
   const cart = useSelector((state: RootState) => state.cart);
   const isSearchOpen = useSelector((state: RootState) => state.ui.isSearchOpen);
   const { data: session, status } = useSession();
-
-  useEffect(() => {
-    const syncReduxUser = async () => {
-      if (status === "authenticated" && session?.user?.email) {
-        // fetch profile
-        const profileResponse = await getMyProfile();
-
-        if (!profileResponse?.success) {
-          toast.error("Failed to retrieve user profile");
-          return;
-        }
-
-        const reduxUser = normalizeUser(profileResponse as any);
-        const cart = await getCart();
-        const cartInfo = cart.data;
-        const wishlist = await getWishlist();
-        const notifications = await getMyNotifications({});
-
-        // hydrate redux
-        dispatch(setUser({ user: reduxUser }));
-        dispatch(setCart(cartInfo));
-        dispatch(setNotifications(notifications.data));
-        const productIds = (wishlist.data?.items ?? []).map(
-          (item: any) => item.productId,
-        );
-        dispatch(setWishlist(productIds));
-      }
-    };
-    syncReduxUser();
-  }, [session, status, dispatch]);
 
   const totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -80,6 +56,105 @@ export function Header() {
   useEffect(() => {
     dispatch(closeAll());
   }, [pathname, dispatch]);
+
+  // Handle user login and cart sync
+  useEffect(() => {
+    const syncReduxUser = async () => {
+      if (status === "authenticated" && session?.user?.email) {
+        try {
+          // Check if we have guest cart items in localStorage
+          const guestCartStr = localStorage.getItem("guest_cart");
+          const hasGuestCart =
+            guestCartStr && JSON.parse(guestCartStr)?.items?.length > 0;
+
+          // Fetch user profile
+          const profileResponse = await getMyProfile();
+          if (!profileResponse?.success) {
+            toast.error("Failed to retrieve user profile");
+            return;
+          }
+
+          const reduxUser = normalizeUser(profileResponse as any);
+
+          // Sync guest cart with server if exists
+          if (hasGuestCart) {
+            dispatch(startSync());
+
+            try {
+              const guestCart = JSON.parse(guestCartStr);
+              const guestItems = guestCart.items;
+
+              // Add each guest item to server cart
+              let allSuccess = true;
+              for (const item of guestItems) {
+                const formData = new FormData();
+                formData.append(
+                  "data",
+                  JSON.stringify({
+                    productId: item.productId,
+                    variantId: item.variantId,
+                    quantity: item.quantity,
+                  }),
+                );
+
+                const result = await addToCart(formData);
+                if (!result?.success) {
+                  console.error(`Failed to sync item ${item.variantId}`);
+                  allSuccess = false;
+                }
+              }
+
+              if (allSuccess) {
+                // Fetch fresh cart from server
+                const cartResponse = await getCart();
+                if (cartResponse?.success && cartResponse.data) {
+                  dispatch(syncCartWithServer(cartResponse.data));
+                }
+                toast.success("Cart synced successfully!");
+              } else {
+                dispatch(syncError());
+                toast.warning("Some items couldn't be synced");
+              }
+            } catch (error) {
+              console.error("Cart sync error:", error);
+              dispatch(syncError());
+            }
+          }
+
+          // Fetch fresh data after sync
+          const [cartResponse, wishlistResponse, notificationsResponse] =
+            await Promise.all([
+              getCart(),
+              getWishlist(),
+              getMyNotifications({}),
+            ]);
+
+          // Hydrate redux
+          dispatch(setUser({ user: reduxUser }));
+
+          if (!hasGuestCart && cartResponse?.success && cartResponse.data) {
+            dispatch(setCart(cartResponse.data));
+          }
+
+          if (wishlistResponse?.success) {
+            const productIds = (wishlistResponse.data?.items ?? []).map(
+              (item: any) => item.productId,
+            );
+            dispatch(setWishlist(productIds));
+          }
+
+          if (notificationsResponse?.success) {
+            dispatch(setNotifications(notificationsResponse.data));
+          }
+        } catch (error) {
+          console.error("Error syncing user data:", error);
+          toast.error("Failed to sync your data");
+        }
+      }
+    };
+
+    syncReduxUser();
+  }, [session, status, dispatch]);
 
   const user = useAppSelector(selectCurrentUser);
 

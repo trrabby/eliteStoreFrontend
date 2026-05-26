@@ -8,6 +8,9 @@ import {
   updateQuantity,
   clearCart as clearCartState,
   setCart,
+  syncCartWithServer,
+  startSync,
+  syncError,
 } from "@/store/slices/cartSlice";
 import {
   addToCart as addToCartService,
@@ -16,6 +19,7 @@ import {
   getCart as getCartService,
   clearCart as clearCartService,
 } from "@/services/cart.service";
+import { selectCurrentUser } from "@/store/slices/authSlice";
 import { toast } from "sonner";
 
 // Helper to convert price to number
@@ -26,13 +30,16 @@ const toNumber = (price: string | number): number => {
 export const useCart = () => {
   const dispatch = useDispatch<AppDispatch>();
   const cart = useSelector((s: RootState) => s.cart);
+  const user = useSelector(selectCurrentUser);
+  const isLoggedIn = !!user;
 
-  // Fetch cart from server
+  // Fetch cart from server (logged in users only)
   const fetchCart = async () => {
+    if (!isLoggedIn) return null;
+
     try {
       const response = await getCartService();
       if (response?.success && response.data) {
-        // console.log(response.data);
         dispatch(setCart(response.data));
         return response.data;
       }
@@ -43,7 +50,63 @@ export const useCart = () => {
     }
   };
 
-  // Optimistic add to cart
+  // Sync guest cart with server when user logs in
+  const syncGuestCart = async () => {
+    if (!isLoggedIn) return;
+
+    // If no items in guest cart, just fetch server cart
+    if (cart.items.length === 0) {
+      await fetchCart();
+      return;
+    }
+
+    dispatch(startSync());
+
+    try {
+      // Add each guest item to server cart one by one
+      let allSuccess = true;
+
+      for (const guestItem of cart.items) {
+        const formData = new FormData();
+        formData.append(
+          "data",
+          JSON.stringify({
+            productId: guestItem.productId,
+            variantId: guestItem.variantId,
+            quantity: guestItem.quantity,
+          }),
+        );
+
+        const result = await addToCartService(formData);
+
+        if (!result?.success) {
+          console.error(
+            `Failed to add item ${guestItem.variantId}:`,
+            result?.message,
+          );
+          allSuccess = false;
+        }
+      }
+
+      if (allSuccess) {
+        // Fetch fresh cart from server
+        const cartResult = await getCartService();
+        if (cartResult?.success && cartResult.data) {
+          dispatch(syncCartWithServer(cartResult.data));
+          toast.success("Cart synced successfully!");
+        }
+      } else {
+        dispatch(syncError());
+        toast.warning("Some items couldn't be synced. Please check your cart.");
+      }
+    } catch (error) {
+      console.error("Cart sync error:", error);
+      dispatch(syncError());
+      toast.error("Failed to sync cart");
+    }
+  };
+
+  // Add to cart (handles both guest and logged in)
   const addToCart = async (payload: {
     productId: number;
     variantId: number;
@@ -56,10 +119,9 @@ export const useCart = () => {
     image: string;
     stock: number;
   }) => {
-    // Create cart item matching your slice structure
-
+    // Create cart item
     const newCartItem = {
-      id: Date.now(), // temporary id, will be replaced when fetching from server
+      id: Date.now(),
       cartId: cart.id ?? 0,
       productId: payload.productId,
       variantId: payload.variantId,
@@ -83,11 +145,18 @@ export const useCart = () => {
         isActive: true,
       },
     };
+
     // Optimistic update
     dispatch(addItem(newCartItem));
 
+    // If guest user, we're done
+    if (!isLoggedIn) {
+      toast.success("Added to cart");
+      return true;
+    }
+
+    // Logged in user - call API
     try {
-      // Prepare data for backend
       const formData = new FormData();
       formData.append(
         "data",
@@ -103,12 +172,11 @@ export const useCart = () => {
       if (!result?.success) {
         // Rollback on failure
         dispatch(removeItem(payload.variantId));
-        // console.log(result);
         toast.error(result?.message ?? "Failed to add to cart");
         return false;
       }
 
-      // Refresh cart from server to get correct IDs and data
+      // Refresh cart from server
       await fetchCart();
       toast.success("Added to cart");
       return true;
@@ -122,17 +190,20 @@ export const useCart = () => {
 
   // Remove item from cart
   const removeFromCart = async (variantId: number) => {
-    // Store the removed item for potential rollback
     const removedItem = cart.items.find((item) => item.variantId === variantId);
 
     // Optimistic update
     dispatch(removeItem(variantId));
 
+    if (!isLoggedIn) {
+      toast.success("Item removed");
+      return true;
+    }
+
     try {
       const result = await removeCartItemService(variantId);
 
       if (!result?.success) {
-        // Rollback on failure
         if (removedItem) {
           dispatch(addItem(removedItem));
         }
@@ -140,10 +211,10 @@ export const useCart = () => {
         return false;
       }
 
-      toast.success("Item removed from cart");
+      await fetchCart();
+      toast.success("Item removed");
       return true;
     } catch (error) {
-      // Rollback on error
       if (removedItem) {
         dispatch(addItem(removedItem));
       }
@@ -154,18 +225,20 @@ export const useCart = () => {
 
   // Update item quantity
   const updateQty = async (variantId: number, quantity: number) => {
-    // Validate quantity
     if (quantity < 1) {
       await removeFromCart(variantId);
       return;
     }
 
-    // Store old item for rollback
     const oldItem = cart.items.find((item) => item.variantId === variantId);
     const oldQuantity = oldItem?.quantity || 1;
 
     // Optimistic update
     dispatch(updateQuantity({ variantId, quantity }));
+
+    if (!isLoggedIn) {
+      return true;
+    }
 
     try {
       const formData = new FormData();
@@ -173,17 +246,14 @@ export const useCart = () => {
       const result = await updateCartItemService(variantId, formData);
 
       if (!result?.success) {
-        // Rollback on failure
         dispatch(updateQuantity({ variantId, quantity: oldQuantity }));
         toast.error(result?.message ?? "Failed to update quantity");
         return false;
       }
 
-      // Refresh cart to ensure consistency
       await fetchCart();
       return true;
     } catch (error) {
-      // Rollback on error
       dispatch(updateQuantity({ variantId, quantity: oldQuantity }));
       toast.error("Failed to update quantity");
       return false;
@@ -192,17 +262,20 @@ export const useCart = () => {
 
   // Clear entire cart
   const clearCart = async () => {
-    // Store current cart for rollback
     const currentCart = { ...cart };
 
     // Optimistic update
     dispatch(clearCartState());
 
+    if (!isLoggedIn) {
+      toast.success("Cart cleared");
+      return true;
+    }
+
     try {
       const result = await clearCartService();
 
       if (!result?.success) {
-        // Rollback on failure
         dispatch(setCart(currentCart));
         toast.error(result?.message ?? "Failed to clear cart");
         return false;
@@ -211,25 +284,13 @@ export const useCart = () => {
       toast.success("Cart cleared");
       return true;
     } catch (error) {
-      // Rollback on error
       dispatch(setCart(currentCart));
       toast.error("Failed to clear cart");
       return false;
     }
   };
 
-  // Sync cart with server (useful after login)
-  const syncCart = async () => {
-    try {
-      const serverCart = await fetchCart();
-      return serverCart;
-    } catch (error) {
-      console.error("Failed to sync cart:", error);
-      return null;
-    }
-  };
-
-  // Helper to get formatted price for display
+  // Get item price helper
   const getItemPrice = (item: (typeof cart.items)[0]) => {
     return toNumber(item.variant.price);
   };
@@ -247,6 +308,8 @@ export const useCart = () => {
     itemCount: cart.itemCount,
     subtotal: cart.subtotal,
     savings: cart.savings,
+    isSyncing: cart.isSyncing,
+    isLoggedIn,
 
     // Helpers
     getItemPrice,
@@ -258,6 +321,6 @@ export const useCart = () => {
     updateQty,
     clearCart,
     fetchCart,
-    syncCart,
+    syncGuestCart,
   };
 };

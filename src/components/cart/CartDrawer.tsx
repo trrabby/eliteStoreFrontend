@@ -29,7 +29,7 @@ export function CartDrawer() {
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [dispatch]);
+  }, [dispatch, items.length]);
 
   // lock body scroll
   useEffect(() => {

@@ -19,6 +19,7 @@ import { toggleWishlist } from "@/services/wishlist.service";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { setCart } from "@/store/slices/cartSlice";
 
 export type ProductCardData = {
   id: number;
@@ -105,11 +106,6 @@ export function ProductCard({
     e.preventDefault();
     e.stopPropagation();
 
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
     // guard: must have a real variant id
     if (outOfStock || isAdding || !variant?.id) return;
 
@@ -118,6 +114,33 @@ export function ProductCard({
     if (imgRef.current && image?.url) {
       flyToCart(image.url, imgRef.current);
     }
+
+    dispatch(
+      setCart({
+        id: null,
+        items: [
+          {
+            id: null,
+            cartId: null,
+            productId: product.id,
+            variantId: variant.id,
+            quantity: 1,
+            addedAt: new Date().toISOString(),
+            product: {
+              id: product.id,
+              name: product.name,
+              slug: product.slug,
+            },
+            variant: {
+              id: variant.id,
+              price: variant.price,
+              comparePrice: variant.comparePrice,
+              stock: variant.stock,
+            },
+          },
+        ],
+      }),
+    );
 
     const success = await addToCart({
       productId: product.id,

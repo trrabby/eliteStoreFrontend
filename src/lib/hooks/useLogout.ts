@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@/store/hook";
 import { serverLogout } from "@/services/auth.service";
 import { setLogout } from "@/store/slices/authSlice";
+import { setCart } from "@/store/slices/cartSlice";
 
 export const useLogout = () => {
   const dispatch = useAppDispatch();
@@ -22,6 +23,15 @@ export const useLogout = () => {
 
       // 3. Clear Redux state
       dispatch(setLogout());
+      dispatch(
+        setCart({
+          id: null,
+          itemCount: 0,
+          items: [],
+          subtotal: 0,
+          savings: 0,
+        }),
+      );
 
       // 4. Redirect to desired path
       router.push(redirectTo);

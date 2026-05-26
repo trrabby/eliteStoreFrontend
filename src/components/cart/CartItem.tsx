@@ -23,7 +23,8 @@ type CartProduct = {
   slug: string;
   status: string;
   publicId: string;
-  images: {
+  images?: {
+    // Make images optional with fallback
     url: string;
     altText: string;
   }[];
@@ -76,6 +77,10 @@ export function CartItem({ item }: CartItemProps) {
     removeFromCart(item.variantId);
   };
 
+  // Safe image URL with fallback
+  const imageUrl = item.product.images?.[0]?.url || "/placeholder.png";
+  const imageAlt = item.product.images?.[0]?.altText || item.product.name;
+
   return (
     <motion.div
       layout
@@ -91,15 +96,8 @@ export function CartItem({ item }: CartItemProps) {
       >
         <Link href={`/products/${item.product.slug}`}>
           <Image
-            src={item.product.images[0]?.url || "/placeholder.png"}
-            alt={item.product.name}
-            fill
-            className="object-cover"
-            sizes="80px"
-          />
-          <Image
-            src={item.product.images[0]?.url || "/placeholder.png"}
-            alt={item.product.name}
+            src={imageUrl}
+            alt={imageAlt}
             fill
             className="object-cover"
             sizes="80px"

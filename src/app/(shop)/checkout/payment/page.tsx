@@ -15,6 +15,8 @@ import {
   Clock,
   ArrowRight,
   AlertCircle,
+  Package,
+  Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppSelector, useAppDispatch } from "@/store/hook";
@@ -22,12 +24,10 @@ import { selectCurrentUser } from "@/store/slices/authSlice";
 import {
   selectCheckout,
   setPaymentMethod,
-  setPlacedOrder,
   resetCheckout,
 } from "@/store/slices/checkoutSlice";
 import { clearCart } from "@/store/slices/cartSlice";
 import { useCart } from "@/lib/hooks/useCart";
-import { createOrder } from "@/services/order.service";
 import { initiatePayment } from "@/services/payment.service";
 import { CheckoutProgress } from "@/components/checkout/CheckoutProgress";
 import { MagneticButton } from "@/components/shared/MagneticButton";
@@ -69,12 +69,17 @@ export default function CheckoutPaymentPage() {
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectCurrentUser);
   const checkout = useAppSelector(selectCheckout);
-  const { items, subtotal } = useCart();
+  const { items, subtotal: cartSubtotal } = useCart();
 
   const [method, setMethod] = useState<string>("CASH_ON_DELIVERY");
   const [mobileNumber, setMobileNumber] = useState("");
   const [processing, setProcessing] = useState(false);
   const [mobileError, setMobileError] = useState("");
+
+  const subtotal = Number(cartSubtotal) || 0;
+  const shippingFee = subtotal >= 1000 ? 0 : 60;
+  const discount = Number(checkout.couponDiscount) || 0;
+  const total = Math.max(0, subtotal + shippingFee - discount);
 
   useEffect(() => {
     if (!user) {
@@ -85,7 +90,12 @@ export default function CheckoutPaymentPage() {
       router.push("/checkout");
       return;
     }
-  }, [user, checkout.selectedAddressId]);
+    if (!checkout.orderId) {
+      toast.error("No order found. Please create an order first.");
+      router.push("/checkout/review");
+      return;
+    }
+  }, [user, checkout.selectedAddressId, checkout.orderId]);
 
   const validateMobileNumber = (number: string) => {
     const bangladeshMobileRegex = /^(01[3-9]\d{8})$/;
@@ -99,14 +109,13 @@ export default function CheckoutPaymentPage() {
     return true;
   };
 
-  const handlePlaceOrderAndPay = async () => {
-    if (!checkout.selectedAddressId) {
-      toast.error("Address not selected");
-      router.push("/checkout");
+  const handlePayNow = async () => {
+    if (!checkout.orderId) {
+      toast.error("Order not found. Please create an order first.");
+      router.push("/checkout/review");
       return;
     }
 
-    // Validate mobile number for mobile banking
     if (method === "MOBILE_BANKING") {
       if (!mobileNumber) {
         toast.error("Please enter your mobile number");
@@ -118,34 +127,14 @@ export default function CheckoutPaymentPage() {
       }
     }
 
+    // Save payment method to store
+    dispatch(setPaymentMethod(method));
     setProcessing(true);
 
     try {
-      // Step 1: Create order
-      const orderFd = new FormData();
-      orderFd.append(
-        "data",
-        JSON.stringify({
-          shippingAddressId: checkout.selectedAddressId,
-          couponCode: checkout.couponCode ?? undefined,
-          notes: checkout.notes || undefined,
-        }),
-      );
-
-      const orderRes = await createOrder(orderFd);
-
-      if (!orderRes?.success) {
-        toast.error(orderRes?.message ?? "Failed to create order.");
-        setProcessing(false);
-        return;
-      }
-
-      const { id: orderId, publicId, orderNumber } = orderRes.data;
-
-      // Step 2: Initiate payment
       const payFd = new FormData();
       const paymentPayload: any = {
-        orderId,
+        orderId: checkout.orderId,
         method: method,
       };
 
@@ -163,34 +152,27 @@ export default function CheckoutPaymentPage() {
         return;
       }
 
-      // Store order info
-      dispatch(
-        setPlacedOrder({ orderId, orderPublicId: publicId, orderNumber }),
-      );
-
-      // Clear cart and checkout state
+      // Clear cart (but keep checkout state for now)
       dispatch(clearCart());
-      dispatch(resetCheckout());
 
       // Handle based on payment method
       if (method === "CASH_ON_DELIVERY") {
-        router.push(`/payment/success?order=${orderNumber}`);
+        // Reset checkout after successful COD order
+        dispatch(resetCheckout());
+        router.push(`/payment/success?order=${checkout.orderNumber || ""}`);
       } else if (payRes.data?.redirectUrl) {
+        // For online payments, redirect to gateway
         window.location.href = payRes.data.redirectUrl;
       } else {
-        router.push(`/payment/success?order=${orderNumber}`);
+        dispatch(resetCheckout());
+        router.push(`/payment/success?order=${checkout.orderNumber || ""}`);
       }
     } catch (error) {
       console.error("Payment error:", error);
       toast.error("Something went wrong. Please try again.");
-    } finally {
       setProcessing(false);
     }
   };
-
-  const shippingFee = subtotal >= 1000 ? 0 : 60;
-  const discount = checkout.couponDiscount ?? 0;
-  const total = Math.max(0, subtotal + shippingFee - discount);
 
   if (!user) return null;
 
@@ -222,13 +204,19 @@ export default function CheckoutPaymentPage() {
                 )}
               </div>
             </div>
+            <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
+              <div className="flex items-center gap-1">
+                <Package size={12} />
+                <span>Order #{checkout.orderNumber || "Pending"}</span>
+              </div>
+            </div>
           </motion.div>
 
           {/* Payment Method Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm transition-all hover:shadow-md"
+            className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm"
           >
             <div className="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white p-6">
               <div className="flex items-center gap-2">
@@ -363,6 +351,11 @@ export default function CheckoutPaymentPage() {
             </div>
             <div className="h-4 w-px bg-gray-200" />
             <div className="flex items-center gap-2">
+              <Truck size={16} className="text-primary" />
+              <span className="text-xs text-gray-600">Fast Delivery</span>
+            </div>
+            <div className="h-4 w-px bg-gray-200" />
+            <div className="flex items-center gap-2">
               <Clock size={16} className="text-primary" />
               <span className="text-xs text-gray-600">
                 Instant Confirmation
@@ -376,14 +369,14 @@ export default function CheckoutPaymentPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => router.push("/checkout/review")}
-              className="flex cursor-pointer items-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-6 py-3.5 text-sm font-medium text-gray-600 transition-all hover:border-gray-300 hover:shadow-sm whitespace-nowrap"
+              className="flex cursor-pointer items-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-6 py-3.5 text-sm font-medium text-gray-600 transition-all hover:border-gray-300"
             >
               <ChevronLeft size={16} />
               Back to Review
             </motion.button>
 
             <MagneticButton
-              onClick={handlePlaceOrderAndPay}
+              onClick={handlePayNow}
               disabled={processing}
               strength={0.05}
               className="flex w-full justify-center items-center btn-primary group py-3.5 text-base disabled:opacity-70"
@@ -399,7 +392,7 @@ export default function CheckoutPaymentPage() {
                     }}
                     className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white"
                   />
-                  <span>Processing...</span>
+                  <span>Processing Payment...</span>
                 </>
               ) : (
                 <>
@@ -413,14 +406,9 @@ export default function CheckoutPaymentPage() {
             </MagneticButton>
           </div>
 
-          {/* Security Notice */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center text-xs text-gray-400"
-          >
+          <p className="text-center text-xs text-gray-400">
             🔒 Your payment information is protected with 256-bit SSL encryption
-          </motion.p>
+          </p>
         </div>
       </div>
     </div>

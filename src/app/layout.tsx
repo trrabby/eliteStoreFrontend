@@ -4,6 +4,7 @@ import { ReduxProvider } from "@/components/providers/ReduxProvider";
 import { FlyToCartProvider } from "@/components/shared/FlyToCart";
 import { Toaster } from "sonner";
 import "./globals.css";
+import { AuthCartSync } from "@/components/auth/AuthCartSync";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -62,6 +63,7 @@ export default function RootLayout({
               }}
             />
           </FlyToCartProvider>
+          <AuthCartSync />
         </ReduxProvider>
       </body>
     </html>
