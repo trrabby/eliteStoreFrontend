@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 /* eslint-disable react/no-unescaped-entities */
@@ -6,7 +7,7 @@ import { useState } from "react";
 
 import Link from "next/link";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { useDispatch } from "react-redux";
 
@@ -52,9 +53,16 @@ import { loginUser } from "@/services/auth.service";
 
 import { getMyProfile } from "@/services/user.service";
 
-import type { IUser, RegisterPayload } from "@/types/user.types";
+import type { RegisterPayload } from "@/types/user.types";
 import { AppDispatch } from "@/store";
+import { normalizeUser } from "@/lib/utils/normalizeUser";
+import { getCart } from "@/services/cart.service";
+import { getWishlist } from "@/services/wishlist.service";
+import { getMyNotifications } from "@/services/notification.service";
 import { setUser } from "@/store/slices/authSlice";
+import { setCart } from "@/store/slices/cartSlice";
+import { setNotifications } from "@/store/slices/notificationSlice";
+import { setWishlist } from "@/store/slices/wishlistSlice";
 
 // ============================
 // Validation Schemas
@@ -103,8 +111,8 @@ function StepIndicator({ step }: { step: number }) {
               s < step
                 ? "bg-primary text-white"
                 : s === step
-                  ? "bg-primary text-white ring-4 ring-primary/20"
-                  : "bg-gray-100 text-gray-400",
+                ? "bg-primary text-white ring-4 ring-primary/20"
+                : "bg-gray-100 text-gray-400",
             )}
           >
             {s < step ? <Check size={14} /> : s}
@@ -131,9 +139,9 @@ function StepIndicator({ step }: { step: number }) {
 
 export default function RegisterPage() {
   const router = useRouter();
-
   const dispatch = useDispatch<AppDispatch>();
-
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect") ?? "/";
   const [step, setStep] = useState<number>(1);
 
   const [step1Data, setStep1Data] = useState<Step1Data | null>(null);
@@ -174,6 +182,7 @@ export default function RegisterPage() {
     if (!step1Data) return;
 
     setLoading(true);
+    const toastId = toast.loading("Creating your account...");
 
     try {
       // register payload
@@ -182,20 +191,23 @@ export default function RegisterPage() {
 
         lastName: step1Data.lastName,
 
-        phone: Number(step1Data.phone),
+        phone: step1Data.phone as string,
 
         email: data.email,
 
         password: data.password,
       };
+      const formData = new FormData();
+      formData.append("data", JSON.stringify(payload));
 
       // register
-      const registerResponse = await registerUser(payload);
+      const registerResponse = await registerUser(formData);
 
       if (!registerResponse.success) {
-        toast.error(registerResponse.message ?? "Registration failed");
-
-        return;
+        return toast.error(
+          registerResponse.message ?? "Registration failed",
+          {},
+        );
       }
 
       // auto login
@@ -206,7 +218,7 @@ export default function RegisterPage() {
       });
 
       if (!loginResponse.success) {
-        toast.error("Account created but auto-login failed");
+        toast.error("Account created but auto-login failed", { id: toastId });
 
         router.push("/login");
 
@@ -215,37 +227,39 @@ export default function RegisterPage() {
 
       // fetch profile
       const profileResponse = await getMyProfile();
-
-      if (!profileResponse.success) {
-        toast.error("Failed to retrieve profile");
-
+      // console.log(profileResponse);
+      if (!profileResponse?.success) {
+        toast.error("Failed to retrieve user profile", { id: toastId });
         return;
       }
 
-      const profile = profileResponse.data;
+      const reduxUser = normalizeUser(profileResponse as any);
+      const cart = await getCart();
+      const cartInfo = cart.data;
+      const wishlist = await getWishlist();
+      const notifications = await getMyNotifications({});
 
-      // normalize redux user
-      // const reduxUser: IUser = {
-      //   ...profile,
+      // hydrate redux
+      dispatch(setUser({ user: reduxUser }));
+      dispatch(setCart(cartInfo));
+      dispatch(setNotifications(notifications.data));
 
-      //   addresses: profile.addresses ?? [],
+      const productIds = (wishlist.data?.items ?? []).map(
+        (item: any) => item.productId,
+      );
+      dispatch(setWishlist(productIds));
 
-      //   notifications: profile.notifications ?? [],
+      const redirectTo =
+        redirect?.startsWith("/") &&
+        redirect !== "/login" &&
+        redirect !== "/register"
+          ? redirect
+          : "/";
 
-      //   defaultAddress:
-      //     profile.addresses?.find((address) => address.isDefault) ?? null,
+      router.push(redirectTo);
+      router.refresh();
 
-      //   notificationCount: profile.notifications?.length ?? 0,
-      // };
-
-      // // hydrate redux
-      // dispatch(
-      //   setUser({
-      //     user: reduxUser,
-      //   }),
-      // );
-
-      toast.success("Account created successfully 🎉");
+      toast.success("Account created successfully 🎉", { id: toastId });
 
       router.push("/");
 
@@ -253,9 +267,10 @@ export default function RegisterPage() {
     } catch (error) {
       console.error(error);
 
-      toast.error("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.", { id: toastId });
     } finally {
       setLoading(false);
+      toast.dismiss(toastId);
     }
   };
 

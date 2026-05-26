@@ -39,7 +39,6 @@ export function Header() {
   const [mounted, setMounted] = useState(false);
   const cart = useSelector((state: RootState) => state.cart);
   const isSearchOpen = useSelector((state: RootState) => state.ui.isSearchOpen);
-  const user = useAppSelector(selectCurrentUser);
   const { data: session, status } = useSession();
 
   useEffect(() => {
@@ -47,7 +46,7 @@ export function Header() {
       if (status === "authenticated" && session?.user?.email) {
         // fetch profile
         const profileResponse = await getMyProfile();
-        // console.log(profileResponse);
+
         if (!profileResponse?.success) {
           toast.error("Failed to retrieve user profile");
           return;
@@ -81,6 +80,8 @@ export function Header() {
   useEffect(() => {
     dispatch(closeAll());
   }, [pathname, dispatch]);
+
+  const user = useAppSelector(selectCurrentUser);
 
   return (
     <>

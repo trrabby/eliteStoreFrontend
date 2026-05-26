@@ -78,7 +78,7 @@ export interface IUser {
 export interface RegisterPayload {
   email: string;
   password: string;
-  phone: number;
+  phone: string;
   firstName: string;
   lastName: string;
 }

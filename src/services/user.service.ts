@@ -1,48 +1,57 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
 import { buildQuery } from "@/lib/utils/buildQuery";
 
-import { fetchPublic, fetchWithAuth } from "./helpers";
+import { fetchWithAuth } from "./helpers";
 
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 
-import type {
-  IUser,
-  IAddress,
-  RegisterPayload,
-  IUserResponse,
-} from "@/types/user.types";
+import type { IUser, IAddress, IUserResponse } from "@/types/user.types";
 import { config } from "@/config";
+import { cookies } from "next/headers";
 
 // ======================================
 // REGISTER
 // ======================================
 
 export const registerUser = async (
-  userData: RegisterPayload,
+  userData: FormData,
 ): Promise<ApiResponse<IUser>> => {
-  const formData = new FormData();
-
-  Object.entries(userData).forEach(([key, value]) => {
-    formData.append(key, String(value));
-  });
-
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BACKEND_URL}/users/register`,
-    {
+  try {
+    const res = await fetch(`${config().Backend_URL}/users/register`, {
       method: "POST",
-
-      body: formData,
-
+      headers: {},
+      body: userData,
       cache: "no-store",
-    },
-  );
+    });
 
-  if (!res.ok) {
-    throw new Error("Registration failed");
+    const result = await res.json();
+    console.log(result);
+
+    if (result?.success) {
+      const cookieStore = await cookies();
+      cookieStore.set("accessToken", result.data.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+      });
+
+      cookieStore.set("refreshToken", result.data.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+      });
+    }
+
+    return result;
+  } catch (error: any) {
+    return {
+      success: false,
+      data: null as any,
+      message: error?.message || "Registration failed",
+    };
   }
-
-  return res.json();
 };
 
 // ======================================

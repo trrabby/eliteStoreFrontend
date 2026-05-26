@@ -67,13 +67,13 @@ export default function LoginPage() {
 
   const onSubmit = async (values: FormData) => {
     setLoading(true);
-
+    const toastId = toast.loading("Signing in...");
     try {
       // login
       const loginResponse = await loginUser(values);
 
       if (!loginResponse?.success) {
-        toast.error(loginResponse?.message ?? "Login failed");
+        toast.error(loginResponse?.message ?? "Login failed", { id: toastId });
         return;
       }
 
@@ -81,7 +81,7 @@ export default function LoginPage() {
       const profileResponse = await getMyProfile();
       // console.log(profileResponse);
       if (!profileResponse?.success) {
-        toast.error("Failed to retrieve user profile");
+        toast.error("Failed to retrieve user profile", { id: toastId });
         return;
       }
 
@@ -101,20 +101,18 @@ export default function LoginPage() {
       );
       dispatch(setWishlist(productIds));
 
-      toast.success("Welcome back 👋");
-
       const redirectTo =
         redirect?.startsWith("/") &&
         redirect !== "/login" &&
         redirect !== "/register"
           ? redirect
           : "/";
-
+      toast.success("Welcome back 👋", { id: toastId });
       router.push(redirectTo);
       router.refresh();
     } catch (error) {
       console.error(error);
-      toast.error("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.", { id: toastId });
     } finally {
       setLoading(false);
     }

@@ -9,7 +9,6 @@ import {
   setNotifications,
   pushNotification,
   removeNotification,
-  setUnreadCount,
   resetNotifications,
 } from "@/store/slices/notificationSlice";
 import {

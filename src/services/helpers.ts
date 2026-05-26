@@ -3,6 +3,7 @@
 
 import { cookies } from "next/headers";
 import { config } from "@/config";
+import { redirect } from "next/navigation";
 
 // ─────────────────────────────────────────
 // Core fetch wrapper with auto token refresh
@@ -80,7 +81,12 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   }
 
   const data = await res.json();
-
+  if (!accessToken) {
+    return {
+      success: false,
+      message: "Please log in again, something went wrong",
+    };
+  }
   return data;
 };
 
