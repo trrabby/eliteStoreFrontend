@@ -18,14 +18,13 @@ import { useAppSelector } from "@/store/hook";
 import { toggleWishlist } from "@/services/wishlist.service";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { setCart } from "@/store/slices/cartSlice";
 
 export type ProductCardData = {
   id: number;
   publicId: string;
   name: string;
   slug: string;
+  status?: string;
   averageRating: number;
   reviewCount: number;
 
@@ -36,9 +35,12 @@ export type ProductCardData = {
 
   variants: {
     id: number;
+    name?: string;
+    sku?: string;
     price: number;
     comparePrice: number | null;
     stock: number;
+    isActive?: boolean;
   }[];
 
   flashSaleItem?: {
@@ -69,7 +71,6 @@ export function ProductCard({
   className,
 }: ProductCardProps) {
   const dispatch = useDispatch();
-  const router = useRouter();
   const { flyToCart } = useFlyToCart();
   const { addToCart } = useCart();
 
@@ -85,9 +86,7 @@ export function ProductCard({
   const variant = product.variants?.[0];
 
   const originalPrice = Number(variant?.price ?? 0);
-
   const flashOffer = product.flashSaleItem;
-  // console.log(flashOffer);
 
   const price = flashOffer?.salePrice
     ? Number(flashOffer.salePrice)
@@ -98,88 +97,84 @@ export function ProductCard({
     : Number(variant?.comparePrice ?? 0);
 
   const stock = variant?.stock ?? 0;
-
   const discount = discountPercent(price, comparePrice ?? 0);
   const outOfStock = stock === 0;
 
+  /* ── Add to cart ── */
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // guard: must have a real variant id
-    if (outOfStock || isAdding || !variant?.id) return;
-
+    if (isAdding || outOfStock) return;
     setIsAdding(true);
+    console.log(variant);
+    try {
+      if (!variant) {
+        toast.error("No variant available");
+        return;
+      }
 
-    if (imgRef.current && image?.url) {
-      flyToCart(image.url, imgRef.current);
+      const res = await addToCart(variant.id, 1, {
+        productId: product.id,
+        product: {
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          status: product.status ?? "ACTIVE",
+          publicId: product.publicId,
+          images:
+            product.images?.map((img) => ({
+              ...img,
+              altText: img.altText ?? "",
+            })) ?? [],
+        },
+        variant: {
+          id: variant.id,
+          name: variant.name ?? "",
+          sku: variant.sku ?? `SKU-${variant.id}`,
+          price: variant.price,
+          comparePrice: variant.comparePrice ? variant.comparePrice : null,
+          stock: variant.stock,
+          isActive: variant.isActive ?? true,
+        },
+      });
+      // console.log(res);
+      if (res?.success) {
+        toast.success("Added to cart!");
+        // flyToCart needs the image URL and the source DOM element
+        if (imgRef.current) {
+          flyToCart(image?.url ?? "", imgRef.current);
+        }
+      } else if (res && !res?.success) {
+        toast.error((res as { message?: string }).message ?? "Failed to add");
+      }
+    } catch (err) {
+      console.log(err);
+      toast.error("Something went wrong");
+    } finally {
+      setIsAdding(false);
     }
-
-    dispatch(
-      setCart({
-        id: null,
-        items: [
-          {
-            id: null,
-            cartId: null,
-            productId: product.id,
-            variantId: variant.id,
-            quantity: 1,
-            addedAt: new Date().toISOString(),
-            product: {
-              id: product.id,
-              name: product.name,
-              slug: product.slug,
-            },
-            variant: {
-              id: variant.id,
-              price: variant.price,
-              comparePrice: variant.comparePrice,
-              stock: variant.stock,
-            },
-          },
-        ],
-      }),
-    );
-
-    const success = await addToCart({
-      productId: product.id,
-      variantId: variant.id,
-      quantity: 1,
-      productName: product.name,
-      variantName: "",
-      sku: "",
-      price,
-      comparePrice,
-      image: image?.url ?? "",
-      stock,
-    });
-
-    if (success) {
-      toast.success("Added to cart!", { icon: "🛍️" });
-    }
-
-    setTimeout(() => setIsAdding(false), 1000);
   };
 
+  /* ── Wishlist (auth required) ── */
   const handleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (!user) {
-      router.push("/login");
+      toast.error("Please login to save items");
       return;
     }
 
-    // optimistic
+    // Optimistic update
     dispatch(toggleWishlistItem(product.id));
 
-    const formData = new FormData();
-    formData.append("data", JSON.stringify({ productId: product.id }));
-    const result = await toggleWishlist(formData);
+    const fd = new FormData();
+    fd.append("data", JSON.stringify({ productId: product.id }));
+    const result = await toggleWishlist(fd);
 
     if (!result?.success) {
-      // rollback
+      // Rollback
       dispatch(toggleWishlistItem(product.id));
       toast.error("Failed to update wishlist");
     }
@@ -227,6 +222,11 @@ export function ProductCard({
               {discount > 0 && (
                 <span className="badge-discount text-xs">-{discount}%</span>
               )}
+              {flashOffer && (
+                <span className="bg-primary text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                  Flash Sale
+                </span>
+              )}
               {outOfStock && (
                 <span className="bg-gray-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
                   Sold Out
@@ -234,7 +234,7 @@ export function ProductCard({
               )}
             </div>
 
-            {/* Wishlist button */}
+            {/* Wishlist */}
             <motion.button
               onClick={handleWishlist}
               whileTap={{ scale: 0.85 }}
@@ -332,7 +332,7 @@ export function ProductCard({
               <span className="text-base font-bold text-primary">
                 {formatBDT(price)}
               </span>
-              {comparePrice && comparePrice > price && (
+              {comparePrice > 0 && comparePrice > price && (
                 <span className="text-xs text-gray-400 line-through">
                   {formatBDT(comparePrice)}
                 </span>

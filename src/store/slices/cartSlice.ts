@@ -5,8 +5,8 @@ type CartVariant = {
   id: number;
   name: string;
   sku: string;
-  price: string;
-  comparePrice: string | null;
+  price: number;
+  comparePrice: number | null;
   stock: number;
   isActive: boolean;
 };
@@ -92,12 +92,12 @@ const clearLocalStorage = () => {
 // Helper: Recalculate totals
 const recalculate = (items: CartItem[]) => {
   const subtotal = items.reduce((sum, i) => {
-    return sum + Number(i.variant.price) * i.quantity;
+    return sum + i.variant.price * i.quantity;
   }, 0);
 
   const savings = items.reduce((sum, i) => {
-    const price = Number(i.variant.price);
-    const compare = i.variant.comparePrice ? Number(i.variant.comparePrice) : 0;
+    const price = i.variant.price;
+    const compare = i.variant.comparePrice ? i.variant.comparePrice : 0;
 
     if (compare > price) {
       return sum + (compare - price) * i.quantity;

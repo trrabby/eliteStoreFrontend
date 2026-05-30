@@ -5,9 +5,10 @@ import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@/store/hook";
-import { serverLogout } from "@/services/auth.service";
+
 import { setLogout } from "@/store/slices/authSlice";
 import { setCart } from "@/store/slices/cartSlice";
+import { serverLogout } from "@/services/auth.service";
 
 export const useLogout = () => {
   const dispatch = useAppDispatch();

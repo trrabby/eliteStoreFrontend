@@ -5,7 +5,13 @@ import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShoppingBag, ArrowRight, Trash2, RefreshCw } from "lucide-react";
+import {
+  ShoppingBag,
+  ArrowRight,
+  Trash2,
+  RefreshCw,
+  LogIn,
+} from "lucide-react";
 import { useCart } from "@/lib/hooks/useCart";
 import { useAppSelector } from "@/store/hook";
 import { selectCurrentUser } from "@/store/slices/authSlice";
@@ -26,16 +32,12 @@ export default function CartPage() {
   const { items, subtotal, savings, itemCount, clearCart, fetchCart } =
     useCart();
 
-  // guard
   useEffect(() => {
-    if (!user) {
-      router.push("/login?redirect=/cart");
-      return;
-    }
-    fetchCart();
+    // Fetch server cart only if logged in
+    if (user) fetchCart();
+    // Guest: already loaded from localStorage via cartSlice initial state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
-
-  if (!user) return null;
 
   const shippingFee = subtotal >= 1000 ? 0 : 60;
   const total = subtotal + shippingFee;
@@ -43,10 +45,7 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div
-        className="container-elite py-12 flex flex-col items-center
-                      justify-center min-h-[60vh] gap-6"
-      >
+      <div className="container-elite py-12 flex flex-col items-center justify-center min-h-[60vh] gap-6">
         <Player
           autoplay
           keepLastFrame
@@ -82,23 +81,49 @@ export default function CartPage() {
         </span>
       </h1>
 
+      {/* Guest notice */}
+      {!user && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 flex items-center justify-between gap-3
+                     bg-primary-pale border border-primary/20 rounded-2xl px-4 py-3"
+        >
+          <p className="text-sm text-gray-700">
+            <span className="font-semibold text-primary">
+              You're not logged in.
+            </span>{" "}
+            Your cart is saved locally. Login to sync across devices.
+          </p>
+          <Link
+            href="/login?redirect=/cart"
+            className="shrink-0 flex items-center gap-1.5 text-sm font-medium
+                       text-primary hover:underline"
+          >
+            <LogIn size={14} />
+            Login
+          </Link>
+        </motion.div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Items */}
         <div className="lg:col-span-2 space-y-3">
-          {/* Bulk actions */}
           <div className="flex items-center justify-between mb-2">
-            <button
-              onClick={fetchCart}
-              className="flex items-center gap-1.5 text-sm text-gray-500
-                         hover:text-primary transition-colors"
-            >
-              <RefreshCw size={14} />
-              Refresh cart
-            </button>
+            {user && (
+              <button
+                onClick={fetchCart}
+                className="flex items-center gap-1.5 text-sm text-gray-500
+                           hover:text-primary transition-colors"
+              >
+                <RefreshCw size={14} />
+                Refresh cart
+              </button>
+            )}
             <button
               onClick={clearCart}
               className="flex items-center gap-1.5 text-sm text-red-500
-                         hover:text-red-600 transition-colors"
+                         hover:text-red-600 transition-colors ml-auto"
             >
               <Trash2 size={14} />
               Clear all
@@ -132,7 +157,6 @@ export default function CartPage() {
               Order Summary
             </h2>
 
-            {/* Free shipping bar */}
             {!freeShipping && (
               <div className="bg-primary-pale rounded-xl p-3">
                 <p className="text-xs text-gray-600 mb-1.5">
@@ -156,10 +180,7 @@ export default function CartPage() {
             )}
 
             {freeShipping && (
-              <div
-                className="flex items-center gap-2 text-xs text-green-600
-                              bg-green-50 rounded-xl p-3"
-              >
+              <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 rounded-xl p-3">
                 🎉{" "}
                 <span className="font-medium">
                   You've unlocked free shipping!
@@ -167,7 +188,6 @@ export default function CartPage() {
               </div>
             )}
 
-            {/* Price breakdown */}
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal ({itemCount} items)</span>
@@ -187,25 +207,37 @@ export default function CartPage() {
                   <span>{formatBDT(shippingFee)}</span>
                 )}
               </div>
-              <div
-                className="flex justify-between font-bold text-gray-900
-                              text-base pt-2 border-t border-gray-100"
-              >
+              <div className="flex justify-between font-bold text-gray-900 text-base pt-2 border-t border-gray-100">
                 <span>Total</span>
                 <span className="text-primary">{formatBDT(total)}</span>
               </div>
             </div>
 
-            {/* Checkout */}
-            <MagneticButton
-              strength={0.25}
-              onClick={() => router.push("/checkout")}
-              className="w-full btn-primary py-3.5 flex items-center
-                         justify-center gap-2"
-            >
-              Proceed to Checkout
-              <ArrowRight size={16} />
-            </MagneticButton>
+            {/* Checkout / Login CTA */}
+            {user ? (
+              <MagneticButton
+                strength={0.25}
+                onClick={() => router.push("/checkout")}
+                className="w-full btn-primary py-3.5 flex items-center justify-center gap-2"
+              >
+                Proceed to Checkout
+                <ArrowRight size={16} />
+              </MagneticButton>
+            ) : (
+              <div className="space-y-2">
+                <MagneticButton
+                  strength={0.25}
+                  onClick={() => router.push("/login?redirect=/checkout")}
+                  className="w-full btn-primary py-3.5 flex items-center justify-center gap-2"
+                >
+                  <LogIn size={16} />
+                  Login to Checkout
+                </MagneticButton>
+                <p className="text-xs text-center text-gray-400">
+                  Your cart items will be saved after login
+                </p>
+              </div>
+            )}
 
             <Link
               href="/products"
@@ -215,7 +247,6 @@ export default function CartPage() {
               Continue Shopping
             </Link>
 
-            {/* Payment methods */}
             <div className="pt-3 border-t border-gray-100">
               <p className="text-xs text-gray-400 text-center mb-2">
                 We accept
@@ -224,8 +255,7 @@ export default function CartPage() {
                 {["SSLCommerz", "bKash", "Nagad", "COD"].map((m) => (
                   <span
                     key={m}
-                    className="text-xs bg-gray-100 text-gray-600
-                               px-2 py-0.5 rounded-md"
+                    className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md"
                   >
                     {m}
                   </span>

@@ -8,6 +8,7 @@ import {
   setUnreadCount,
   markAllRead,
 } from "@/store/slices/notificationSlice";
+// import { getAccessToken } from "@/services/auth.service";
 import { getAccessToken } from "@/services/auth.service";
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {

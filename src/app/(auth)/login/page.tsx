@@ -5,23 +5,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-
 import { useRouter, useSearchParams } from "next/navigation";
-
 import { useDispatch } from "react-redux";
-
 import { motion } from "framer-motion";
-
 import { Mail, Lock, ArrowRight } from "lucide-react";
-
 import { toast } from "sonner";
-
 import { useForm } from "react-hook-form";
-
 import { zodResolver } from "@hookform/resolvers/zod";
-
 import { z } from "zod";
-
 import { AuthCard } from "@/components/shared/AuthCard";
 import { FormInput } from "@/components/shared/FormInput";
 import { OAuthButtons } from "@/components/shared/OAuthButtons";
@@ -48,13 +39,9 @@ type FormData = z.infer<typeof schema>;
 
 export default function LoginPage() {
   const dispatch = useDispatch<AppDispatch>();
-
   const router = useRouter();
-
   const searchParams = useSearchParams();
-
   const redirect = searchParams.get("redirect") ?? "/";
-
   const [loading, setLoading] = useState<boolean>(false);
 
   const {
@@ -71,7 +58,7 @@ export default function LoginPage() {
     try {
       // login
       const loginResponse = await loginUser(values);
-
+      console.log(loginResponse);
       if (!loginResponse?.success) {
         toast.error(loginResponse?.message ?? "Login failed", { id: toastId });
         return;
@@ -79,7 +66,7 @@ export default function LoginPage() {
 
       // fetch profile
       const profileResponse = await getMyProfile();
-      // console.log(profileResponse);
+      console.log(profileResponse);
       if (!profileResponse?.success) {
         toast.error("Failed to retrieve user profile", { id: toastId });
         return;
@@ -88,7 +75,7 @@ export default function LoginPage() {
       const reduxUser = normalizeUser(profileResponse as any);
       const cart = await getCart();
       const cartInfo = cart.data;
-      const wishlist = await getWishlist();
+      const wishlist: any = await getWishlist();
       const notifications = await getMyNotifications({});
 
       // hydrate redux

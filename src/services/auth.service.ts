@@ -14,6 +14,7 @@ export const loginUser = async (userData: FieldValues) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(userData),
+      credentials: "include",
       cache: "no-store",
     });
 
@@ -66,12 +67,14 @@ export const loginViaProvider = async (
       cookieStore.set("accessToken", result.data.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
         path: "/",
         maxAge: 60 * 60 * 24,
       });
       cookieStore.set("refreshToken", result.data.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
         path: "/",
         maxAge: 60 * 60 * 24 * 30,
       });

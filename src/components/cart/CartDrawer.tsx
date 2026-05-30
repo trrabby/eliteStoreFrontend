@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ShoppingBag } from "lucide-react";
+import { X, ShoppingBag, LogIn } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 import { toggleCart } from "@/store/slices/uiSlice";
@@ -10,6 +10,67 @@ import { CartItem } from "./CartItem";
 import { CartSummary } from "./CartSummary";
 import { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCart } from "@/lib/hooks/useCart";
+import { formatBDT } from "@/lib/utils/currency";
+
+function GuestCartSummary() {
+  const { subtotal, itemCount } = useCart();
+  const dispatch = useDispatch();
+  const router = useRouter();
+
+  const shippingFee = subtotal >= 1000 ? 0 : 60;
+  const total = subtotal + shippingFee;
+
+  return (
+    <div className="border-t border-gray-100 pt-4 space-y-3">
+      <div className="space-y-1.5 text-sm">
+        <div className="flex justify-between text-gray-600">
+          <span>Subtotal ({itemCount} items)</span>
+          <span>{formatBDT(subtotal)}</span>
+        </div>
+        <div className="flex justify-between text-gray-600">
+          <span>Shipping</span>
+          <span>
+            {subtotal >= 1000 ? (
+              <span className="text-green-600 font-medium">FREE</span>
+            ) : (
+              formatBDT(shippingFee)
+            )}
+          </span>
+        </div>
+        <div className="flex justify-between font-bold text-gray-900 text-base pt-2 border-t border-gray-100">
+          <span>Total</span>
+          <span className="text-primary">{formatBDT(total)}</span>
+        </div>
+      </div>
+
+      <div className="bg-primary-pale rounded-xl p-3 text-xs text-gray-600 text-center">
+        Login to sync your cart and checkout
+      </div>
+
+      <motion.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => {
+          dispatch(toggleCart());
+          router.push("/login?redirect=/checkout");
+        }}
+        className="w-full btn-primary flex items-center justify-center gap-2 py-3.5"
+      >
+        <LogIn size={16} />
+        Login to Checkout
+      </motion.button>
+
+      <button
+        onClick={() => dispatch(toggleCart())}
+        className="w-full text-sm text-center text-gray-500 hover:text-primary transition-colors py-1"
+      >
+        Continue Shopping
+      </button>
+    </div>
+  );
+}
 
 // ── Dynamic import — prevents "document is not defined" on SSR ──
 const Player = dynamic(
@@ -21,7 +82,7 @@ export function CartDrawer() {
   const dispatch = useDispatch();
   const { isCartOpen } = useSelector((s: RootState) => s.ui);
   const { items } = useSelector((s: RootState) => s.cart);
-
+  const user = useSelector((s: RootState) => s.auth.user);
   // close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -142,7 +203,7 @@ export function CartDrawer() {
             {/* Summary */}
             {items.length > 0 && (
               <div className="px-5 pb-6 pt-3">
-                <CartSummary />
+                {user ? <CartSummary /> : <GuestCartSummary />}
               </div>
             )}
           </motion.div>
