@@ -146,7 +146,7 @@ function VendorNav({
           onClick={handleLogout}
           className={`
             w-full flex items-center gap-2 px-3 py-2 rounded-xl
-            text-sm transition-all
+            text-sm transition-all cursor-pointer justify-center
             ${
               dark
                 ? "text-gray-400 hover:bg-gray-800 hover:text-red-400"
@@ -216,7 +216,7 @@ export default function VendorLayout({
         {/* Main */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
-          <header className="bg-white border-b border-gray-100 px-4 lg:px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <header className="bg-white border-b lg:hidden border-gray-100 px-4 lg:px-6 py-4 flex items-center justify-between sticky top-0 z-10">
             <div className="flex items-center gap-3">
               {/* Mobile hamburger */}
               <button
@@ -226,9 +226,9 @@ export default function VendorLayout({
               >
                 <Menu size={20} />
               </button>
-              <h1 className="font-display font-semibold text-gray-900 text-base">
+              {/* <h1 className="font-display h-9 font-semibold text-gray-900 text-base">
                 {currentLabel}
-              </h1>
+              </h1> */}
             </div>
             <Link
               href="/"

@@ -24,6 +24,7 @@ export type ProductCardData = {
   publicId: string;
   name: string;
   slug: string;
+  shortDescription: string | null;
   status?: string;
   averageRating: number;
   reviewCount: number;
@@ -105,51 +106,19 @@ export function ProductCard({
     e.preventDefault();
     e.stopPropagation();
 
-    if (isAdding || outOfStock) return;
+    if (isAdding || outOfStock || !variant) return;
     setIsAdding(true);
-    console.log(variant);
-    try {
-      if (!variant) {
-        toast.error("No variant available");
-        return;
-      }
 
-      const res = await addToCart(variant.id, 1, {
-        productId: product.id,
-        product: {
-          id: product.id,
-          name: product.name,
-          slug: product.slug,
-          status: product.status ?? "ACTIVE",
-          publicId: product.publicId,
-          images:
-            product.images?.map((img) => ({
-              ...img,
-              altText: img.altText ?? "",
-            })) ?? [],
-        },
-        variant: {
-          id: variant.id,
-          name: variant.name ?? "",
-          sku: variant.sku ?? `SKU-${variant.id}`,
-          price: variant.price,
-          comparePrice: variant.comparePrice ? variant.comparePrice : null,
-          stock: variant.stock,
-          isActive: variant.isActive ?? true,
-        },
-      });
-      // console.log(res);
+    try {
+      const res = await addToCart(variant.id, product.id, 1);
+
       if (res?.success) {
         toast.success("Added to cart!");
-        // flyToCart needs the image URL and the source DOM element
-        if (imgRef.current) {
-          flyToCart(image?.url ?? "", imgRef.current);
-        }
+        if (imgRef.current) flyToCart(image?.url ?? "", imgRef.current);
       } else if (res && !res?.success) {
         toast.error((res as { message?: string }).message ?? "Failed to add");
       }
-    } catch (err) {
-      console.log(err);
+    } catch {
       toast.error("Something went wrong");
     } finally {
       setIsAdding(false);

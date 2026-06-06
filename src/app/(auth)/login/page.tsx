@@ -24,11 +24,11 @@ import { AppDispatch } from "@/store";
 import { setUser } from "@/store/slices/authSlice";
 import { normalizeUser } from "@/lib/utils/normalizeUser";
 import { getCart } from "@/services/cart.service";
-import { setCart } from "@/store/slices/cartSlice";
 import { getWishlist } from "@/services/wishlist.service";
 import { setWishlist } from "@/store/slices/wishlistSlice";
 import { getMyNotifications } from "@/services/notification.service";
 import { setNotifications } from "@/store/slices/notificationSlice";
+import { clearCart, setItemsFromDB } from "@/store/slices/cartSlice";
 
 const schema = z.object({
   email: emailSchema,
@@ -74,13 +74,24 @@ export default function LoginPage() {
 
       const reduxUser = normalizeUser(profileResponse as any);
       const cart = await getCart();
-      const cartInfo = cart.data;
       const wishlist: any = await getWishlist();
       const notifications = await getMyNotifications({});
 
       // hydrate redux
       dispatch(setUser({ user: reduxUser }));
-      dispatch(setCart(cartInfo));
+
+      // Updated: Use setItemsFromDB instead of setCart
+      // Check if cart has items in the expected format
+      if (cart?.success && Array.isArray(cart.data?.items)) {
+        dispatch(setItemsFromDB(cart.data.items));
+      } else if (cart?.data?.items) {
+        // Handle different response structure if needed
+        dispatch(setItemsFromDB(cart.data.items));
+      } else {
+        // If no cart items, clear the cart
+        dispatch(clearCart());
+      }
+
       dispatch(setNotifications(notifications.data));
 
       const productIds = (wishlist.data?.items ?? []).map(

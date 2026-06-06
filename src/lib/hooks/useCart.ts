@@ -8,9 +8,8 @@ import {
   addItem,
   removeItem,
   updateQuantity,
-  clearCart as clearCartRedux,
-  setCart,
-  CartItem,
+  clearCart as clearCartAction,
+  setItemsFromDB,
 } from "@/store/slices/cartSlice";
 import {
   addToCart as addToCartAPI,
@@ -19,109 +18,87 @@ import {
   clearCart as clearCartAPI,
   getCart,
 } from "@/services/cart.service";
+import { toast } from "sonner";
 
 export function useCart() {
   const dispatch = useDispatch();
   const user = useAppSelector(selectCurrentUser);
-  const { items, subtotal, savings, itemCount, id } = useSelector(
-    (s: RootState) => s.cart,
-  );
+  const { items, itemCount, isSyncing } = useSelector((s: RootState) => s.cart);
 
-  /* ── Fetch from server ── */
+  /* ─── Fetch cart from DB and sync local state ─── */
   const fetchCart = async () => {
     if (!user) return;
     const res = await getCart();
-    if (res?.success && res.data) dispatch(setCart(res.data));
+    if (res?.success && Array.isArray(res.data?.items)) {
+      dispatch(setItemsFromDB(res.data.items));
+    }
   };
 
-  /* ── Add ── */
+  /* ─── Add to cart ─── */
   const addToCart = async (
     variantId: number,
-    quantity: number = 1,
-    itemData?: {
-      productId: number;
-      product: CartItem["product"];
-      variant: CartItem["variant"];
-    },
+    productId: number,
+    quantity = 1,
   ) => {
-    console.log(quantity);
-    if (!user) {
-      // ── Guest: local only (persisted by cartSlice to localStorage) ──
-      if (!itemData)
-        return { success: false, message: "Item data required for guest cart" };
-      dispatch(
-        addItem({
-          id: Date.now(), // temp id
-          cartId: 0, // 0 = guest marker
-          productId: itemData.productId,
-          variantId,
-          quantity,
-          addedAt: new Date().toISOString(),
-          product: itemData.product,
-          variant: itemData.variant,
-        }),
-      );
-      return { success: true, guest: true };
-    }
+    // Always update Redux immediately (persisted for guest + auth)
+    dispatch(addItem({ variantId, productId, quantity }));
 
-    // ── Authenticated: API call ──
+    if (!user) return { success: true, guest: true };
+
+    // Auth: sync to DB
     const fd = new FormData();
-    fd.append(
-      "data",
-      JSON.stringify({
-        productId: itemData?.productId,
-        variantId,
-        quantity,
-      }),
-    );
+    fd.append("data", JSON.stringify({ variantId, productId, quantity }));
     const res = await addToCartAPI(fd);
-    if (res?.success && res.data)
-      dispatch(
-        addItem({
-          id: res.data.id,
-          cartId: res.data.cartId,
-          productId: res.data.productId,
-          variantId: res.data.variantId,
-          quantity: res.data.quantity,
-          addedAt: res.data.addedAt,
-          product: res.data.product,
-          variant: res.data.variant,
-        }),
-      );
-    console.log(res);
+
+    if (!res?.success) {
+      // Rollback local if API failed
+      dispatch(removeItem(variantId));
+      toast.error(res?.message ?? "Failed to add to cart");
+    }
     return res;
   };
 
-  /* ── Remove ── */
+  /* ─── Remove from cart ─── */
   const removeFromCart = async (variantId: number) => {
-    // Optimistic local update first
     dispatch(removeItem(variantId));
     if (!user) return;
-    await removeCartItem(variantId);
+
+    const res = await removeCartItem(variantId);
+    if (!res?.success) {
+      toast.error("Failed to remove item");
+    }
   };
 
-  /* ── Update qty ── */
+  /* ─── Update quantity ─── */
   const updateQty = async (variantId: number, quantity: number) => {
+    if (quantity < 1) {
+      removeFromCart(variantId);
+      return;
+    }
+
     dispatch(updateQuantity({ variantId, quantity }));
     if (!user) return;
+
     const fd = new FormData();
     fd.append("data", JSON.stringify({ quantity }));
-    await updateCartItem(variantId, fd);
+    const res = await updateCartItem(variantId, fd);
+
+    if (!res?.success) {
+      toast.error("Failed to update quantity");
+    }
   };
 
-  /* ── Clear ── */
+  /* ─── Clear cart ─── */
   const clearCart = async () => {
-    dispatch(clearCartRedux());
+    dispatch(clearCartAction());
     if (!user) return;
     await clearCartAPI();
   };
 
   return {
     items,
-    subtotal,
-    savings,
     itemCount,
-    cartId: id,
+    isSyncing,
     fetchCart,
     addToCart,
     removeFromCart,

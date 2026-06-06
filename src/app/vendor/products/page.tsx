@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
@@ -5,7 +6,15 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Plus, Search, Pencil, Trash2, Eye, Package } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  Eye,
+  Package,
+  Trash,
+} from "lucide-react";
 import { getMyProducts, deleteProduct } from "@/services/product.service";
 import { formatBDT } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/date";
@@ -30,6 +39,10 @@ export default function VendorProductsPage() {
   const [status, setStatus] = useState("ALL");
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [selectedProducts, setSelectedProducts] = useState<Set<number>>(
+    new Set(),
+  );
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const limit = 12;
 
   const load = async () => {
@@ -50,15 +63,95 @@ export default function VendorProductsPage() {
     load();
   }, [status, page]);
 
+  // Clear selections when filters change
+  useEffect(() => {
+    setSelectedProducts(new Set());
+  }, [status, page, search]);
+
   const handleDelete = async (id: number, name: string) => {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
     const res = await deleteProduct(id);
     if (res?.success || typeof res === "string") {
       toast.success("Product deleted");
       load();
+      setSelectedProducts((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     } else {
       toast.error((res as any)?.message ?? "Failed to delete");
     }
+  };
+
+  const handleBulkDelete = async () => {
+    const productIds = Array.from(selectedProducts);
+    if (productIds.length === 0) return;
+
+    const productNames = products
+      .filter((p) => selectedProducts.has(p.id))
+      .map((p) => p.name)
+      .join(", ");
+
+    if (
+      !confirm(
+        `Delete ${productIds.length} product(s)?\n\n${productNames}\n\nThis cannot be undone.`,
+      )
+    )
+      return;
+
+    setBulkDeleting(true);
+
+    // For now, just console log the array of product ids
+    console.log("Bulk delete product IDs:", productIds);
+    toast.info(
+      `Bulk delete would remove ${productIds.length} product(s). Check console for IDs.`,
+    );
+
+    // When you implement the actual bulk delete API, uncomment this:
+    // try {
+    //   const results = await Promise.allSettled(
+    //     productIds.map(id => deleteProduct(id))
+    //   );
+    //   const succeeded = results.filter(r => r.status === 'fulfilled' && (r.value?.success || typeof r.value === "string")).length;
+    //   const failed = results.length - succeeded;
+    //
+    //   if (succeeded > 0) {
+    //     toast.success(`${succeeded} product(s) deleted successfully`);
+    //   }
+    //   if (failed > 0) {
+    //     toast.error(`${failed} product(s) failed to delete`);
+    //   }
+    //   load();
+    //   setSelectedProducts(new Set());
+    // } catch (error) {
+    //   toast.error("Failed to delete products");
+    // } finally {
+    //   setBulkDeleting(false);
+    // }
+
+    setBulkDeleting(false);
+  };
+
+  const toggleSelectAll = () => {
+    const currentProducts = filtered;
+    if (selectedProducts.size === currentProducts.length) {
+      setSelectedProducts(new Set());
+    } else {
+      setSelectedProducts(new Set(currentProducts.map((p) => p.id)));
+    }
+  };
+
+  const toggleSelectProduct = (id: number) => {
+    setSelectedProducts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
   const filtered = search
@@ -66,6 +159,11 @@ export default function VendorProductsPage() {
         p.name.toLowerCase().includes(search.toLowerCase()),
       )
     : products;
+
+  const isAllSelected =
+    filtered.length > 0 && selectedProducts.size === filtered.length;
+  const isSomeSelected =
+    selectedProducts.size > 0 && selectedProducts.size < filtered.length;
 
   return (
     <div className="space-y-5">
@@ -118,6 +216,35 @@ export default function VendorProductsPage() {
         </div>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedProducts.size > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-primary/5 rounded-xl p-3 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-gray-900">
+              {selectedProducts.size} product(s) selected
+            </span>
+            <button
+              onClick={() => setSelectedProducts(new Set())}
+              className="text-xs text-gray-500 hover:text-gray-700"
+            >
+              Clear
+            </button>
+          </div>
+          <button
+            onClick={handleBulkDelete}
+            disabled={bulkDeleting}
+            className="flex items-center gap-2 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Trash size={14} />
+            {bulkDeleting ? "Deleting..." : "Delete Selected"}
+          </button>
+        </motion.div>
+      )}
+
       {/* Products table */}
       {loading ? (
         <div className="space-y-2">
@@ -142,6 +269,20 @@ export default function VendorProductsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
+                  {/* Checkbox column */}
+                  <th className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      ref={(el) => {
+                        if (el) {
+                          el.indeterminate = isSomeSelected;
+                        }
+                      }}
+                      onChange={toggleSelectAll}
+                      className="rounded border-gray-300 text-primary focus:ring-primary/20"
+                    />
+                  </th>
                   {[
                     "Product",
                     "Status",
@@ -167,8 +308,20 @@ export default function VendorProductsPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.03 }}
-                    className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors"
+                    className={cn(
+                      "border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors",
+                      selectedProducts.has(p.id) && "bg-primary/5",
+                    )}
                   >
+                    {/* Checkbox */}
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedProducts.has(p.id)}
+                        onChange={() => toggleSelectProduct(p.id)}
+                        className="rounded border-gray-300 text-primary focus:ring-primary/20"
+                      />
+                    </td>
                     {/* Product */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -183,7 +336,7 @@ export default function VendorProductsPage() {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate max-w-[180px]">
+                          <p className="text-sm font-medium text-gray-900 truncate max-w-45">
                             {p.name}
                           </p>
                           <p className="text-xs text-gray-400">
@@ -217,8 +370,8 @@ export default function VendorProductsPage() {
                           (p.variants?.[0]?.stock ?? 0) === 0
                             ? "text-red-500"
                             : (p.variants?.[0]?.stock ?? 0) < 10
-                              ? "text-amber-500"
-                              : "text-green-600",
+                            ? "text-amber-500"
+                            : "text-green-600",
                         )}
                       >
                         {p.variants?.[0]?.stock ?? 0}

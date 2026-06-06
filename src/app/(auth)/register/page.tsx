@@ -60,7 +60,13 @@ import { getCart } from "@/services/cart.service";
 import { getWishlist } from "@/services/wishlist.service";
 import { getMyNotifications } from "@/services/notification.service";
 import { setUser } from "@/store/slices/authSlice";
-import { setCart } from "@/store/slices/cartSlice";
+import {
+  clearCart,
+  setItemsFromDB,
+  startSync,
+  syncDone,
+} from "@/store/slices/cartSlice";
+import { addToCart as addToCartAPI } from "@/services/cart.service";
 import { setNotifications } from "@/store/slices/notificationSlice";
 import { setWishlist } from "@/store/slices/wishlistSlice";
 
@@ -188,13 +194,9 @@ export default function RegisterPage() {
       // register payload
       const payload: RegisterPayload = {
         firstName: step1Data.firstName,
-
         lastName: step1Data.lastName,
-
         phone: step1Data.phone as string,
-
         email: data.email,
-
         password: data.password,
       };
       const formData = new FormData();
@@ -213,35 +215,83 @@ export default function RegisterPage() {
       // auto login
       const loginResponse = await loginUser({
         email: data.email,
-
         password: data.password,
       });
 
       if (!loginResponse.success) {
         toast.error("Account created but auto-login failed", { id: toastId });
-
         router.push("/login");
-
         return;
       }
 
       // fetch profile
       const profileResponse = await getMyProfile();
-      // console.log(profileResponse);
       if (!profileResponse?.success) {
         toast.error("Failed to retrieve user profile", { id: toastId });
         return;
       }
 
       const reduxUser = normalizeUser(profileResponse as any);
-      const cart = await getCart();
-      const cartInfo = cart.data;
+
+      // Check for guest cart items in localStorage before fetching cart
+      const guestCartStr = localStorage.getItem("guest_cart");
+      const hasGuestCart =
+        guestCartStr && JSON.parse(guestCartStr)?.items?.length > 0;
+
+      if (hasGuestCart) {
+        // Sync guest cart with server
+        dispatch(startSync());
+
+        try {
+          const guestCart = JSON.parse(guestCartStr);
+          const guestItems = guestCart.items;
+
+          // Add each guest item to server cart
+          for (const item of guestItems) {
+            const formData = new FormData();
+            formData.append(
+              "data",
+              JSON.stringify({
+                productId: item.productId,
+                variantId: item.variantId,
+                quantity: item.quantity,
+              }),
+            );
+            await addToCartAPI(formData);
+          }
+
+          // Clear guest cart from localStorage
+          localStorage.removeItem("guest_cart");
+
+          // Fetch the synced cart from server
+          const cartResponse = await getCart();
+          if (
+            cartResponse?.success &&
+            Array.isArray(cartResponse.data?.items)
+          ) {
+            dispatch(setItemsFromDB(cartResponse.data.items));
+          }
+
+          toast.success("Cart synced successfully!");
+        } catch (error) {
+          console.error("Cart sync error:", error);
+          dispatch(syncDone());
+        }
+      } else {
+        // No guest cart, just fetch user's cart
+        const cart = await getCart();
+        if (cart?.success && Array.isArray(cart.data?.items)) {
+          dispatch(setItemsFromDB(cart.data.items));
+        } else {
+          dispatch(clearCart());
+        }
+      }
+
       const wishlist = await getWishlist();
       const notifications = await getMyNotifications({});
 
       // hydrate redux
       dispatch(setUser({ user: reduxUser }));
-      dispatch(setCart(cartInfo));
       dispatch(setNotifications(notifications.data));
 
       const productIds = (wishlist.data?.items ?? []).map(
@@ -262,11 +312,9 @@ export default function RegisterPage() {
       toast.success("Account created successfully 🎉", { id: toastId });
 
       router.push("/");
-
       router.refresh();
     } catch (error) {
       console.error(error);
-
       toast.error("Something went wrong. Please try again.", { id: toastId });
     } finally {
       setLoading(false);

@@ -1,85 +1,20 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/lib/hooks/useCart";
 import { formatBDT } from "@/lib/utils/currency";
-import Link from "next/link";
+import type { DisplayCartItem } from "@/lib/hooks/useCartDisplay";
 
-type CartVariant = {
-  id: number;
-  name: string;
-  sku: string;
-  price: string | number;
-  comparePrice: string | number | null;
-  stock: number;
-  isActive: boolean;
-};
+type Props = { item: DisplayCartItem };
 
-type CartProduct = {
-  id: number;
-  name: string;
-  slug: string;
-  status: string;
-  publicId: string;
-  images?: {
-    // Make images optional with fallback
-    url: string;
-    altText: string;
-  }[];
-};
-
-type CartItem = {
-  id: number;
-  cartId: number;
-  productId: number;
-  variantId: number;
-
-  quantity: number;
-
-  // snapshot pricing
-  price: string | number;
-  comparePrice: string | number | null;
-
-  addedAt: string;
-
-  product: CartProduct;
-  variant: CartVariant;
-};
-
-type CartItemProps = {
-  item: CartItem;
-};
-
-export function CartItem({ item }: CartItemProps) {
+export function CartItem({ item }: Props) {
   const { removeFromCart, updateQty } = useCart();
 
-  // Helper to get numeric price
-  const getPrice = (price: string | number): number => {
-    return typeof price === "string" ? parseFloat(price) : price;
-  };
-
-  const currentPrice = getPrice(item.price);
-
-  const comparePriceValue = item.comparePrice
-    ? getPrice(item.comparePrice)
-    : null;
-
-  const canIncrease = item.quantity < item.variant.stock;
+  const canIncrease = item.quantity < item.stock;
   const canDecrease = item.quantity > 1;
-
-  const handleUpdateQuantity = (newQuantity: number) => {
-    updateQty(item.variantId, newQuantity);
-  };
-
-  const handleRemove = () => {
-    removeFromCart(item.variantId);
-  };
-
-  // Safe image URL with fallback
-  const imageUrl = item.product.images?.[0]?.url || "/placeholder.png";
-  const imageAlt = item.product.images?.[0]?.altText || item.product.name;
 
   return (
     <motion.div
@@ -89,89 +24,78 @@ export function CartItem({ item }: CartItemProps) {
       exit={{ opacity: 0, x: -20 }}
       className="flex gap-3 py-4 border-b border-gray-100 last:border-0"
     >
-      {/* Product Image */}
-      <div
-        className="relative w-20 h-20 rounded-xl overflow-hidden
-                      shrink-0 bg-primary-pale"
+      {/* Image */}
+      <Link
+        href={`/products/${item.productSlug}`}
+        className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-primary-pale"
       >
-        <Link href={`/products/${item.product.slug}`}>
-          <Image
-            src={imageUrl}
-            alt={imageAlt}
-            fill
-            className="object-cover"
-            sizes="80px"
-          />
-        </Link>
-      </div>
+        <Image
+          src={item.imageUrl || "/placeholder.png"}
+          alt={item.productName}
+          fill
+          className="object-cover"
+          sizes="80px"
+        />
+      </Link>
 
       {/* Details */}
       <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-semibold text-gray-900 line-clamp-1 hover:text-primary-dark">
-          <Link href={`/products/${item.product.slug}`}>
-            {item.product.name}
-          </Link>
-        </h4>
-        {item.variant.name && (
-          <p className="text-xs text-gray-500 mt-0.5">{item.variant.name}</p>
+        <Link href={`/products/${item.productSlug}`}>
+          <h4 className="text-sm font-semibold text-gray-900 line-clamp-1 hover:text-primary transition-colors">
+            {item.productName}
+          </h4>
+        </Link>
+
+        {item.variantName && (
+          <p className="text-xs text-gray-500 mt-0.5">{item.variantName}</p>
         )}
 
-        {/* Price */}
         <div className="flex items-center gap-2 mt-1.5">
           <span className="text-sm font-bold text-primary">
-            {formatBDT(currentPrice * item.quantity)}
+            {formatBDT(item.price * item.quantity)}
           </span>
-          {comparePriceValue && comparePriceValue > currentPrice && (
+          {item.comparePrice && item.comparePrice > item.price && (
             <span className="text-xs text-gray-400 line-through">
-              {formatBDT(comparePriceValue * item.quantity)}
+              {formatBDT(item.comparePrice * item.quantity)}
             </span>
           )}
         </div>
 
-        {/* Quantity controls */}
+        {/* Qty controls */}
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center gap-1">
             <button
               onClick={() =>
                 canDecrease
-                  ? handleUpdateQuantity(item.quantity - 1)
-                  : handleRemove()
+                  ? updateQty(item.variantId, item.quantity - 1)
+                  : removeFromCart(item.variantId)
               }
-              className="w-7 h-7 rounded-lg border border-gray-200
-                         flex items-center justify-center
-                         hover:border-primary hover:text-primary
-                         transition-all duration-150 text-gray-600"
+              className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center
+                         hover:border-primary hover:text-primary transition-all text-gray-600"
             >
               <Minus size={12} />
             </button>
 
-            <span
-              className="w-8 text-center text-sm font-semibold
-                             text-gray-900"
-            >
+            <span className="w-8 text-center text-sm font-semibold text-gray-900">
               {item.quantity}
             </span>
 
             <button
               onClick={() =>
-                canIncrease && handleUpdateQuantity(item.quantity + 1)
+                canIncrease && updateQty(item.variantId, item.quantity + 1)
               }
               disabled={!canIncrease}
-              className="w-7 h-7 rounded-lg border border-gray-200
-                         flex items-center justify-center
-                         hover:border-primary hover:text-primary
-                         disabled:opacity-40 disabled:cursor-not-allowed
-                         transition-all duration-150 text-gray-600"
+              className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center
+                         hover:border-primary hover:text-primary disabled:opacity-40
+                         disabled:cursor-not-allowed transition-all text-gray-600"
             >
               <Plus size={12} />
             </button>
           </div>
 
-          {/* Remove */}
           <button
-            onClick={handleRemove}
-            className="p-1.5 text-gray-400 hover:text-red-500
-                       transition-colors rounded-lg hover:bg-red-50"
+            onClick={() => removeFromCart(item.variantId)}
+            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
           >
             <Trash2 size={14} />
           </button>

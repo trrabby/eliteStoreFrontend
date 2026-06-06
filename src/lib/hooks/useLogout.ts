@@ -1,4 +1,3 @@
-// useLogout.ts
 "use client";
 
 import { signOut } from "next-auth/react";
@@ -7,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@/store/hook";
 
 import { setLogout } from "@/store/slices/authSlice";
-import { setCart } from "@/store/slices/cartSlice";
+import { clearCart } from "@/store/slices/cartSlice"; // Changed: import clearCart instead of setCart
 import { serverLogout } from "@/services/auth.service";
 
 export const useLogout = () => {
@@ -24,20 +23,15 @@ export const useLogout = () => {
 
       // 3. Clear Redux state
       dispatch(setLogout());
-      dispatch(
-        setCart({
-          id: null,
-          itemCount: 0,
-          items: [],
-          subtotal: 0,
-          savings: 0,
-        }),
-      );
+      dispatch(clearCart()); // Changed: use clearCart action from cartSlice
 
-      // 4. Redirect to desired path
+      // 4. Clear any guest cart data from localStorage (optional)
+      localStorage.removeItem("guest_cart");
+
+      // 5. Redirect to desired path
       router.push(redirectTo);
 
-      // 5. Notify success
+      // 6. Notify success
       toast.success("Logged out successfully");
     } catch (err) {
       console.error("Logout error:", err);

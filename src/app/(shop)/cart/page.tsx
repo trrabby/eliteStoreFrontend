@@ -13,6 +13,7 @@ import {
   LogIn,
 } from "lucide-react";
 import { useCart } from "@/lib/hooks/useCart";
+import { useCartDisplay } from "@/lib/hooks/useCartDisplay";
 import { useAppSelector } from "@/store/hook";
 import { selectCurrentUser } from "@/store/slices/authSlice";
 import { CartItem } from "@/components/cart/CartItem";
@@ -26,24 +27,25 @@ const Player = dynamic(
   { ssr: false },
 );
 
+const FREE_SHIPPING_THRESHOLD = 1000;
+
 export default function CartPage() {
   const router = useRouter();
   const user = useAppSelector(selectCurrentUser);
-  const { items, subtotal, savings, itemCount, clearCart, fetchCart } =
-    useCart();
+  const { itemCount, clearCart, fetchCart } = useCart();
+  const { displayItems, loading, subtotal, savings } = useCartDisplay();
 
   useEffect(() => {
-    // Fetch server cart only if logged in
+    // Sync with server on mount (auth only)
     if (user) fetchCart();
-    // Guest: already loaded from localStorage via cartSlice initial state
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const shippingFee = subtotal >= 1000 ? 0 : 60;
+  const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 60;
   const total = subtotal + shippingFee;
-  const freeShipping = subtotal >= 1000;
+  const freeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
 
-  if (items.length === 0) {
+  if (itemCount === 0) {
     return (
       <div className="container-elite py-12 flex flex-col items-center justify-center min-h-[60vh] gap-6">
         <Player
@@ -97,11 +99,9 @@ export default function CartPage() {
           </p>
           <Link
             href="/login?redirect=/cart"
-            className="shrink-0 flex items-center gap-1.5 text-sm font-medium
-                       text-primary hover:underline"
+            className="shrink-0 flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
           >
-            <LogIn size={14} />
-            Login
+            <LogIn size={14} /> Login
           </Link>
         </motion.div>
       )}
@@ -113,36 +113,40 @@ export default function CartPage() {
             {user && (
               <button
                 onClick={fetchCart}
-                className="flex items-center gap-1.5 text-sm text-gray-500
-                           hover:text-primary transition-colors"
+                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary transition-colors"
               >
-                <RefreshCw size={14} />
-                Refresh cart
+                <RefreshCw size={14} /> Refresh cart
               </button>
             )}
             <button
               onClick={clearCart}
-              className="flex items-center gap-1.5 text-sm text-red-500
-                         hover:text-red-600 transition-colors ml-auto"
+              className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-600 transition-colors ml-auto"
             >
-              <Trash2 size={14} />
-              Clear all
+              <Trash2 size={14} /> Clear all
             </button>
           </div>
 
           <div className="card overflow-hidden">
-            <AnimatePresence mode="popLayout">
-              {items.map((item) => (
-                <CartItem
-                  key={item.variantId}
-                  item={{
-                    ...item,
-                    price: item?.variant?.price || 0,
-                    comparePrice: item?.variant?.comparePrice || 0,
-                  }}
-                />
-              ))}
-            </AnimatePresence>
+            {loading && displayItems.length === 0 ? (
+              <div className="space-y-4 p-4">
+                {Array.from({ length: Math.min(itemCount, 4) }).map((_, i) => (
+                  <div key={i} className="flex gap-3">
+                    <div className="skeleton w-20 h-20 rounded-xl" />
+                    <div className="flex-1 space-y-2 pt-1">
+                      <div className="skeleton h-3 w-3/4 rounded" />
+                      <div className="skeleton h-3 w-1/2 rounded" />
+                      <div className="skeleton h-3 w-1/4 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <AnimatePresence mode="popLayout">
+                {displayItems.map((item) => (
+                  <CartItem key={item.variantId} item={item} />
+                ))}
+              </AnimatePresence>
+            )}
           </div>
         </div>
 
@@ -162,7 +166,7 @@ export default function CartPage() {
                 <p className="text-xs text-gray-600 mb-1.5">
                   Add{" "}
                   <span className="font-bold text-primary">
-                    {formatBDT(1000 - subtotal)}
+                    {formatBDT(FREE_SHIPPING_THRESHOLD - subtotal)}
                   </span>{" "}
                   more for free shipping!
                 </p>
@@ -171,7 +175,10 @@ export default function CartPage() {
                     className="h-full bg-gradient-primary rounded-full"
                     initial={{ width: 0 }}
                     animate={{
-                      width: `${Math.min((subtotal / 1000) * 100, 100)}%`,
+                      width: `${Math.min(
+                        (subtotal / FREE_SHIPPING_THRESHOLD) * 100,
+                        100,
+                      )}%`,
                     }}
                     transition={{ duration: 0.6, ease: "easeOut" }}
                   />
@@ -213,15 +220,13 @@ export default function CartPage() {
               </div>
             </div>
 
-            {/* Checkout / Login CTA */}
             {user ? (
               <MagneticButton
                 strength={0.25}
                 onClick={() => router.push("/checkout")}
                 className="w-full btn-primary py-3.5 flex items-center justify-center gap-2"
               >
-                Proceed to Checkout
-                <ArrowRight size={16} />
+                Proceed to Checkout <ArrowRight size={16} />
               </MagneticButton>
             ) : (
               <div className="space-y-2">
@@ -230,19 +235,17 @@ export default function CartPage() {
                   onClick={() => router.push("/login?redirect=/checkout")}
                   className="w-full btn-primary py-3.5 flex items-center justify-center gap-2"
                 >
-                  <LogIn size={16} />
-                  Login to Checkout
+                  <LogIn size={16} /> Login to Checkout
                 </MagneticButton>
                 <p className="text-xs text-center text-gray-400">
-                  Your cart items will be saved after login
+                  Cart items will sync after login
                 </p>
               </div>
             )}
 
             <Link
               href="/products"
-              className="block text-center text-sm text-gray-500
-                         hover:text-primary transition-colors"
+              className="block text-center text-sm text-gray-500 hover:text-primary transition-colors"
             >
               Continue Shopping
             </Link>

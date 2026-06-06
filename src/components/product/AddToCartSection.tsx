@@ -59,47 +59,30 @@ export function AddToCartSection({
   const { registerCartRef } = useFlyToCart();
 
   const handleAddToCart = async () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
     if (outOfStock || addingCart || !selectedVariant) return;
-
     setAddingCart(true);
 
-    // fly animation from product image
     const imgEl = document.querySelector(
       "[data-product-main-image]",
     ) as HTMLElement;
     if (imgEl) flyToCart(product.images?.[0]?.url ?? "", imgEl);
 
-    const success = await addToCart({
-      productId: product.id,
-      variantId: selectedVariant.id,
-      quantity,
-      productName: product.name,
-      variantName: selectedVariant.name ?? "",
-      sku: selectedVariant.sku,
-      price,
-      comparePrice: selectedVariant.comparePrice
-        ? Number(selectedVariant.comparePrice)
-        : null,
-      image: product.images?.[0]?.url ?? "",
-      stock,
-    });
+    const res = await addToCart(selectedVariant.id, product.id, quantity);
 
-    if (success) toast.success(`${quantity} item(s) added to cart! 🛍️`);
-    setTimeout(() => setAddingCart(false), 1000);
+    if (res?.success) {
+      toast.success(`${quantity} item(s) added to cart! 🛍️`);
+    } else if (res && !res?.success) {
+      toast.error((res as { message?: string }).message ?? "Failed");
+    }
+
+    setTimeout(() => setAddingCart(false), 600);
   };
 
   const handleBuyNow = async () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
     setBuyingNow(true);
     await handleAddToCart();
     router.push("/checkout");
+    setBuyingNow(false);
   };
 
   const handleWishlist = async () => {
@@ -132,8 +115,8 @@ export function AddToCartSection({
             stock > 10
               ? "bg-green-500"
               : stock > 0
-                ? "bg-amber-500"
-                : "bg-red-500",
+              ? "bg-amber-500"
+              : "bg-red-500",
           )}
         />
         <span
@@ -142,15 +125,15 @@ export function AddToCartSection({
             stock > 10
               ? "text-green-600"
               : stock > 0
-                ? "text-amber-600"
-                : "text-red-600",
+              ? "text-amber-600"
+              : "text-red-600",
           )}
         >
           {outOfStock
             ? "Out of stock"
             : stock <= 10
-              ? `Only ${stock} left!`
-              : "In stock"}
+            ? `Only ${stock} left!`
+            : "In stock"}
         </span>
       </div>
 

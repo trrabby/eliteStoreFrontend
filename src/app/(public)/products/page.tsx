@@ -103,51 +103,52 @@ const AllProductsPage = async ({
 
       <div className="flex gap-6">
         {/* Sidebar filters — desktop */}
-        <aside className="hidden lg:block w-64 flex-shrink-0">
+        <aside className="hidden lg:block w-64 shrink-0">
           <div className="card p-5 sticky top-28">
             <ProductFilters categories={categories} brands={brands} />
           </div>
         </aside>
 
-        {/* Main content */}
-        <div className="flex-1 min-w-0">
-          {/* Mobile filter button + sort bar */}
-          <div className="flex items-center gap-3 mb-4">
-            <MobileFilterDrawer categories={categories} brands={brands} />
-            <div className="flex-1">
-              <ProductSortBar total={total} />
-            </div>
-          </div>
-
-          {/* Active filter chips */}
-          <Suspense>
-            <ActiveFilterChips categories={categories} brands={brands} />
-          </Suspense>
-
-          {/* Product grid */}
-          {products.length === 0 ? (
-            <EmptyProducts search={query.search} />
-          ) : (
-            <>
-              <div
-                className="grid grid-cols-2 sm:grid-cols-3
-                              lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4"
-              >
-                {products.map((product: any, i: number) => (
-                  <ProductCard
-                    key={product.publicId}
-                    product={product}
-                    index={i}
-                  />
-                ))}
+        {
+          <div className="flex-1 min-w-0">
+            {/* Mobile filter button + sort bar */}
+            <div className="flex items-center gap-3 mb-4">
+              <MobileFilterDrawer categories={categories} brands={brands} />
+              <div className="flex-1">
+                <ProductSortBar total={total} />
               </div>
+            </div>
 
-              <Suspense>
-                <Pagination total={total} limit={limit} page={page} />
-              </Suspense>
-            </>
-          )}
-        </div>
+            {/* Active filter chips */}
+            <Suspense>
+              <ActiveFilterChips categories={categories} brands={brands} />
+            </Suspense>
+
+            {/* Product grid */}
+            {products.length === 0 ? (
+              <EmptyProducts search={query.search} />
+            ) : (
+              <>
+                <div
+                  className="grid grid-cols-2 sm:grid-cols-3
+                              lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4"
+                >
+                  {products.map((product: any, i: number) => (
+                    <ProductCard
+                      key={product.publicId}
+                      product={product}
+                      index={i}
+                    />
+                  ))}
+                </div>
+
+                <Suspense>
+                  <Pagination total={total} limit={limit} page={page} />
+                </Suspense>
+              </>
+            )}
+          </div>
+        }
       </div>
     </div>
   );

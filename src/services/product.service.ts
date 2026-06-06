@@ -36,6 +36,15 @@ export const getProductBySlug = async (slug: string) => {
   }
 };
 
+// Public product fetch by id — no auth required
+export const getProductByIdPublic = async (id: number) => {
+  try {
+    return await fetchPublic(`/products/id/${id}`, {}, 60);
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
 // get product by id — vendor/admin
 export const getProductById = async (id: number) => {
   try {
@@ -61,7 +70,7 @@ export const getMyProducts = async (params: {
 // create product — vendor/admin
 export const createProduct = async (formData: FormData) => {
   try {
-    return await fetchWithAuth("/products", {
+    return await fetchWithAuth("/products/create", {
       method: "POST",
       headers: {},
       body: formData,
@@ -74,7 +83,7 @@ export const createProduct = async (formData: FormData) => {
 // update product — vendor/admin
 export const updateProduct = async (id: number, formData: FormData) => {
   try {
-    return await fetchWithAuth(`/products/${id}`, {
+    return await fetchWithAuth(`/products/update/${id}`, {
       method: "PATCH",
       headers: {},
       body: formData,
@@ -87,7 +96,7 @@ export const updateProduct = async (id: number, formData: FormData) => {
 // delete product
 export const deleteProduct = async (id: number) => {
   try {
-    return await fetchWithAuth(`/products/${id}`, { method: "DELETE" });
+    return await fetchWithAuth(`/products/delete/${id}`, { method: "DELETE" });
   } catch (error: any) {
     return Error(error);
   }
@@ -97,7 +106,7 @@ export const deleteProduct = async (id: number) => {
 
 export const addProductImages = async (id: number, formData: FormData) => {
   try {
-    return await fetchWithAuth(`/products/${id}/images`, {
+    return await fetchWithAuth(`/products/addProductImages/${id}`, {
       method: "POST",
       headers: {},
       body: formData,
@@ -110,7 +119,7 @@ export const addProductImages = async (id: number, formData: FormData) => {
 export const setPrimaryImage = async (productId: number, imageId: number) => {
   try {
     return await fetchWithAuth(
-      `/products/${productId}/images/${imageId}/set-primary`,
+      `/products/update/${productId}/images/${imageId}/set-primary`,
       { method: "PATCH" },
     );
   } catch (error: any) {
@@ -123,9 +132,12 @@ export const deleteProductImage = async (
   imageId: number,
 ) => {
   try {
-    return await fetchWithAuth(`/products/${productId}/images/${imageId}`, {
-      method: "DELETE",
-    });
+    return await fetchWithAuth(
+      `/products/delete/${productId}/images/${imageId}`,
+      {
+        method: "DELETE",
+      },
+    );
   } catch (error: any) {
     return Error(error);
   }
@@ -145,6 +157,14 @@ export const createVariant = async (productId: number, formData: FormData) => {
   }
 };
 
+export const getProductVariants = async (productId: number) => {
+  try {
+    return await fetchWithAuth(`/products/${productId}/variants`);
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
 export const updateVariant = async (
   productId: number,
   variantId: number,
@@ -157,6 +177,7 @@ export const updateVariant = async (
       body: formData,
     });
   } catch (error: any) {
+    console.log(error);
     return Error(error);
   }
 };
@@ -200,6 +221,14 @@ export const addAttribute = async (productId: number, formData: FormData) => {
   }
 };
 
+export const getProductAttributes = async (productId: number) => {
+  try {
+    return await fetchWithAuth(`/products/${productId}/attributes`);
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
 export const deleteAttribute = async (
   productId: number,
   attributeId: number,
@@ -226,6 +255,14 @@ export const addRelatedProducts = async (
       headers: {},
       body: formData,
     });
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
+export const getProductRelated = async (productId: number) => {
+  try {
+    return await fetchWithAuth(`/products/${productId}/related`);
   } catch (error: any) {
     return Error(error);
   }

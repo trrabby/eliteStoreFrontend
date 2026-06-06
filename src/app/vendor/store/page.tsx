@@ -11,6 +11,7 @@ import {
   updateVendorProfile,
 } from "@/services/vendor.service";
 import { formatDate } from "@/lib/utils/date";
+import Image from "next/image";
 
 export default function VendorStorePage() {
   const logoRef = useRef<HTMLInputElement>(null);
@@ -105,7 +106,7 @@ export default function VendorStorePage() {
   const bannerSrc = bannerPreview ?? vendor?.banner;
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-3xl space-y-6 mx-auto">
       <h2 className="font-display text-2xl font-bold text-gray-900">
         My Store
       </h2>
@@ -113,7 +114,11 @@ export default function VendorStorePage() {
       {/* Verification banner */}
       {vendor && (
         <div
-          className={`card p-4 flex items-center gap-3 border-l-4 ${vendor.isVerified ? "border-green-400 bg-green-50/40" : "border-amber-400 bg-amber-50/40"}`}
+          className={`card p-4 flex mx-auto items-center gap-3 border-l-4 ${
+            vendor.isVerified
+              ? "border-green-400 bg-green-50/40"
+              : "border-amber-400 bg-amber-50/40"
+          }`}
         >
           <ShieldCheck
             size={18}
@@ -139,9 +144,11 @@ export default function VendorStorePage() {
           className="relative h-32 bg-gradient-primary cursor-pointer group"
         >
           {bannerSrc && (
-            <img
+            <Image
               src={bannerSrc}
               alt="banner"
+              height={128}
+              width={512}
               className="w-full h-full object-cover"
             />
           )}
