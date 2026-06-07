@@ -50,7 +50,7 @@ export const getBrandById = async (id: number) => {
 // create brand — admin
 export const createBrand = async (formData: FormData) => {
   try {
-    return await fetchWithAuth("/brands", {
+    return await fetchWithAuth("/brands/create", {
       method: "POST",
       headers: {},
       body: formData,
@@ -63,7 +63,7 @@ export const createBrand = async (formData: FormData) => {
 // update brand — admin
 export const updateBrand = async (id: number, formData: FormData) => {
   try {
-    return await fetchWithAuth(`/brands/${id}`, {
+    return await fetchWithAuth(`/brands/update/${id}`, {
       method: "PATCH",
       headers: {},
       body: formData,

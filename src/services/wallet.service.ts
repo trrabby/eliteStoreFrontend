@@ -86,3 +86,19 @@ export const adminCreditWallet = async (formData: FormData) => {
     return Error(error);
   }
 };
+
+export const getAllWalletTransactions = async (params: {
+  page?: number;
+  limit?: number;
+  userId?: number;
+  type?: string;
+  status?: string;
+  reason?: string;
+  search?: string;
+}) => {
+  try {
+    return await fetchWithAuth(`/wallet/transactions/all${buildQuery(params)}`);
+  } catch (e: any) {
+    return Error(e);
+  }
+};

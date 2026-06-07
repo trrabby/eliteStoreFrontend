@@ -76,7 +76,9 @@ export const updateCategory = async (id: number, formData: FormData) => {
 // delete category — admin
 export const deleteCategory = async (id: number) => {
   try {
-    return await fetchWithAuth(`/categories/${id}`, { method: "DELETE" });
+    return await fetchWithAuth(`/categories/delete/${id}`, {
+      method: "DELETE",
+    });
   } catch (error: any) {
     return Error(error);
   }

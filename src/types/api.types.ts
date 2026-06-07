@@ -15,5 +15,5 @@ export interface PaginatedResponse<T> {
   success: boolean;
   message: string;
   meta: PaginationMeta;
-  data: T[];
+  data: T[] | T;
 }

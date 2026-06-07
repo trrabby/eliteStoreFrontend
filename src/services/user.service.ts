@@ -95,7 +95,7 @@ interface GetUsersParams {
 
 export const getAllUsers = async (
   params: GetUsersParams,
-): Promise<PaginatedResponse<IUser>> => {
+): Promise<PaginatedResponse<any>> => {
   return fetchWithAuth(`/users${buildQuery(params)}`);
 };
 
@@ -113,6 +113,16 @@ export const makeAdmin = async (
   return fetchWithAuth(`/users/make-admin/${publicId}`, {
     method: "PATCH",
   });
+};
+
+export const toggleUserStatus = async (id: number) => {
+  try {
+    return await fetchWithAuth(`/users/toggle-status/${id}`, {
+      method: "PATCH",
+    });
+  } catch (e: any) {
+    return Error(e);
+  }
 };
 
 // ======================================
