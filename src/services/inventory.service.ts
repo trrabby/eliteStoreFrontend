@@ -35,6 +35,29 @@ export const getVariantInventoryLogs = async (
   }
 };
 
+// get all variants stock of a vendor
+
+export const getAllVendorStockVariants = async (
+  vendorId: number,
+  params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    sortBy?: string;
+    minStock?: number;
+    maxStock?: number;
+  },
+) => {
+  try {
+    return await fetchWithAuth(
+      `/inventory-logs/stock/vendor/${vendorId}${buildQuery(params)}`,
+    );
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
 // low stock alert list
 export const getLowStockVariants = async (params: {
   page?: number;
@@ -42,7 +65,22 @@ export const getLowStockVariants = async (params: {
   threshold?: number;
 }) => {
   try {
-    return await fetchWithAuth(`/inventory/low-stock${buildQuery(params)}`);
+    return await fetchWithAuth(
+      `/inventory-logs/low-stock${buildQuery(params)}`,
+    );
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
+export const getLowStockVariantsByVendor = async (
+  vendorId: number,
+  params: { page?: number; limit?: number; threshold?: number },
+) => {
+  try {
+    return await fetchWithAuth(
+      `/inventory-logs/low-stock/vendor/${vendorId}${buildQuery(params)}`,
+    );
   } catch (error: any) {
     return Error(error);
   }
@@ -55,6 +93,19 @@ export const getOutOfStockVariants = async (params: {
 }) => {
   try {
     return await fetchWithAuth(`/inventory/out-of-stock${buildQuery(params)}`);
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
+export const getOutOfStockVariantsByVendor = async (
+  vendorId: number,
+  params: { page?: number; limit?: number },
+) => {
+  try {
+    return await fetchWithAuth(
+      `/inventory/out-of-stock/vendor/${vendorId}${buildQuery(params)}`,
+    );
   } catch (error: any) {
     return Error(error);
   }

@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "..";
+import { vendorProfile } from "@/lib/utils/normalizeUser";
 
 export type UserRole = "SUPER_ADMIN" | "ADMIN" | "USER" | "VENDOR";
 
@@ -43,6 +44,7 @@ export interface IUser {
   createdAt: string;
 
   accountInfo: IAccountInfo | null;
+  vendorProfile: vendorProfile | undefined;
 
   defaultAddress: IAddress | null;
 

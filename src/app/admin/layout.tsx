@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { NotificationToast } from "@/components/shared/NotificationToast";
 import { SocketProvider } from "@/components/providers/SocketProvider";
 import { MobileSidebarDrawer } from "@/components/shared/MobileSidebarDrawer";
-import { useAppDispatch, useAppSelector } from "@/store/hook";
+import { useAppSelector } from "@/store/hook";
 import { selectCurrentUser } from "@/store/slices/authSlice";
 import { useLogout } from "@/lib/hooks/useLogout";
 
@@ -57,7 +57,6 @@ function AdminNav({
   onNavigate?: () => void;
 }) {
   const logout = useLogout();
-  const dispatch = useAppDispatch();
   const router = useRouter();
   const user = useAppSelector(selectCurrentUser);
 

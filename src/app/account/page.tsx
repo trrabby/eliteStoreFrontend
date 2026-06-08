@@ -106,12 +106,9 @@ export default function ProfilePage() {
     .map((r) => r.charAt(0).toUpperCase() + r.slice(1).toLowerCase())
     .join(" ");
 
-  const dashboardPath =
-    user?.role === "SUPER_ADMIN" || user?.role === "ADMIN"
-      ? "/admin/dashboard"
-      : user?.role === "VENDOR"
-      ? "/vendor/dashboard"
-      : null;
+  const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+  const isVendor = user?.role === "VENDOR";
+  const hasVendorProfile = !!user?.vendorProfile;
 
   const avatar = avatarPreview ?? user?.accountInfo?.avatar ?? null;
 
@@ -348,22 +345,35 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {dashboardPath && (
-                <Link
-                  href={dashboardPath}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <button
-                    className="flex items-center gap-2 rounded-xl border border-primary
-                               px-5 py-2.5 text-sm font-medium text-primary
-                               transition-all hover:bg-primary hover:text-white cursor-pointer"
+              <>
+                {/* Admin Panel Button */}
+                {isAdmin && (
+                  <Link
+                    href="/admin/dashboard"
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
-                    <ShieldCheck size={15} />
-                    {user?.role === "ADMIN" ? "Admin" : "Vendor"} Panel
-                  </button>
-                </Link>
-              )}
+                    <button className="flex items-center gap-2 rounded-xl border border-primary px-5 py-2.5 text-sm font-medium text-primary transition-all hover:bg-primary hover:text-white cursor-pointer">
+                      <ShieldCheck size={15} />
+                      Admin Panel
+                    </button>
+                  </Link>
+                )}
+
+                {/* Vendor Panel Button */}
+                {(isVendor || (isAdmin && hasVendorProfile)) && (
+                  <Link
+                    href="/vendor/dashboard"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <button className="flex items-center gap-2 rounded-xl border border-primary px-5 py-2.5 text-sm font-medium text-primary transition-all hover:bg-primary hover:text-white cursor-pointer">
+                      <ShieldCheck size={15} />
+                      Vendor Panel
+                    </button>
+                  </Link>
+                )}
+              </>
             </div>
           </div>
 

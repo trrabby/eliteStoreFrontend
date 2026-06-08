@@ -7,21 +7,21 @@ import {
   Package,
   ShoppingCart,
   Star,
-  TrendingUp,
   DollarSign,
-  Eye,
   AlertTriangle,
   ArrowUpRight,
+  Clock,
+  BadgeCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { getMyProducts } from "@/services/product.service";
 import { getMyOrders } from "@/services/order.service";
 import { getMyVendorProfile } from "@/services/vendor.service";
-import { getLowStockVariants } from "@/services/inventory.service";
-import { getMyFlashSales } from "@/services/flashSale.service";
+import { getLowStockVariantsByVendor } from "@/services/inventory.service";
 import { formatBDT } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
+import Image from "next/image";
 
 function StatCard({
   icon: Icon,
@@ -41,7 +41,7 @@ function StatCard({
   const content = (
     <motion.div
       whileHover={{ y: -2 }}
-      className={`card p-5 border-l-4 ${color} cursor-default`}
+      className={`card p-5 border-l-4 ${color} cursor-default text-nowrap`}
     >
       <div className="flex items-start justify-between">
         <div>
@@ -70,12 +70,16 @@ export default function VendorDashboardPage() {
 
   useEffect(() => {
     const load = async () => {
-      const [vRes, pRes, oRes, lRes] = await Promise.all([
-        getMyVendorProfile(),
+      const vRes = await getMyVendorProfile();
+      const [pRes, oRes, lRes] = await Promise.all([
         getMyProducts({ limit: 5, status: "ACTIVE" }),
         getMyOrders({ limit: 5 }),
-        getLowStockVariants({ limit: 5, threshold: 10 }),
+        getLowStockVariantsByVendor(vRes?.data?.id, {
+          limit: 5,
+          threshold: 10,
+        }),
       ]);
+      // console.log(vRes, pRes, oRes, lRes);
       if (vRes?.success) setVendor(vRes.data);
       if (pRes?.success) setProducts(pRes.data?.products ?? []);
       if (oRes?.success) setOrders(oRes.data?.orders ?? oRes.data ?? []);
@@ -113,10 +117,12 @@ export default function VendorDashboardPage() {
       {vendor && (
         <div className="card p-5 flex items-center gap-4">
           {vendor.logo ? (
-            <img
+            <Image
               src={vendor.logo}
               alt={vendor.storeName}
               className="w-14 h-14 rounded-2xl object-cover"
+              width={56}
+              height={56}
             />
           ) : (
             <div className="w-14 h-14 rounded-2xl bg-gradient-primary flex items-center justify-center text-white text-xl font-bold">
@@ -124,17 +130,37 @@ export default function VendorDashboardPage() {
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="font-display font-bold text-gray-900 text-lg">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="font-display text-2xl font-bold text-gray-900">
                 {vendor.storeName}
               </h2>
-              {vendor.isVerified && (
-                <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium">
+              {vendor.isVerified ? (
+                <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 px-2.5 py-1 rounded-full font-medium">
+                  <BadgeCheck size={12} />
                   Verified
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-xs bg-yellow-50 text-yellow-700 px-2.5 py-1 rounded-full font-medium">
+                  <Clock size={12} />
+                  Pending Verification
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-500 truncate">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span className="text-sm text-gray-500">
+                Vendor ID: #{vendor.id}
+              </span>
+              <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+              <span className="text-sm text-gray-500">
+                Member since{" "}
+                {new Date(vendor.createdAt).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </span>
+            </div>
+            <p className="text-sm text-gray-600 mt-2 line-clamp-2">
               {vendor.description ?? "No description set"}
             </p>
           </div>
@@ -151,8 +177,11 @@ export default function VendorDashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Package}
-          label="Total Products"
+          label="Active Products"
           value={vendor?._count?.products ?? products.length}
+          sub={`${
+            products?.filter((p) => p.status === "DRAFT").length ?? 0
+          } drafts`}
           color="border-primary"
           href="/vendor/products"
         />
@@ -218,8 +247,8 @@ export default function VendorDashboardPage() {
                         order.status === "DELIVERED"
                           ? "bg-green-50 text-green-600"
                           : order.status === "PENDING"
-                            ? "bg-yellow-50 text-yellow-600"
-                            : "bg-gray-50 text-gray-600",
+                          ? "bg-yellow-50 text-yellow-600"
+                          : "bg-gray-50 text-gray-600",
                       )}
                     >
                       {order.status}

@@ -1,4 +1,26 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { IUser } from "@/store/slices/authSlice";
+
+export interface vendorProfile {
+  id: number;
+  publicId: string;
+  userId: number;
+  storeName: string;
+  slug: string;
+  logo: any;
+  banner: any;
+  description: string;
+  rating: string;
+  totalSales: number;
+  isVerified: boolean;
+  verifiedById: any;
+  isActive: boolean;
+  returnPolicy: any;
+  supportEmail: any;
+  supportPhone: any;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface ProfileResponse {
   data: {
@@ -20,6 +42,9 @@ export interface ProfileResponse {
       lastName: string;
       displayName: string | null;
       avatar: string | null;
+      bio: string | null;
+      dateOfBirth: string | null;
+      gender: "MALE" | "FEMALE" | "OTHER" | null;
     } | null;
 
     addresses?: Array<{
@@ -36,6 +61,8 @@ export interface ProfileResponse {
       longitude: string | null;
       isDefault: boolean;
     }>;
+
+    vendorProfile?: vendorProfile; // Adjust this type based on your actual vendor profile structure
 
     notifications?: unknown[];
   };
@@ -63,6 +90,8 @@ export const normalizeUser = (profile: ProfileResponse): IUser => {
     createdAt: data.createdAt,
 
     accountInfo: data.accountInfo,
+
+    vendorProfile: data.vendorProfile,
 
     defaultAddress,
 

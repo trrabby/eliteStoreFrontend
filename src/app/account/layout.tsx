@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable react-hooks/rules-of-hooks */
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -26,8 +25,8 @@ import {
   Settings,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useAppDispatch, useAppSelector } from "@/store/hook";
-import { selectCurrentUser, setLogout } from "@/store/slices/authSlice";
+import { useAppSelector } from "@/store/hook";
+import { selectCurrentUser } from "@/store/slices/authSlice";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useLogout } from "@/lib/hooks/useLogout";
@@ -51,15 +50,16 @@ function AccountNav({
   onNavigate?: () => void;
 }) {
   const logout = useLogout();
-  const dispatch = useAppDispatch();
   const router = useRouter();
   const user = useAppSelector(selectCurrentUser);
 
   const handleLogout = async () => {
-    await logout();
-    dispatch(setLogout());
-    toast.info("Logged out");
-    router.push("/login");
+    try {
+      await logout();
+      router.push("/login");
+    } catch {
+      toast.error("Something went wrong");
+    }
   };
 
   const initials = `${user?.accountInfo?.firstName?.[0] ?? ""}${
@@ -80,7 +80,7 @@ function AccountNav({
               className="object-cover w-full h-full"
             />
           ) : (
-            initials
+            initials || "U"
           )}
         </div>
         <div className="min-w-0">
@@ -170,16 +170,27 @@ export default function AccountLayout({
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Redirect if not logged in - same pattern as AdminLayout
   useEffect(() => {
-    if (!user) router.push(`/login?redirect=${pathname}`);
+    if (!user) {
+      router.replace(`/login?redirect=${pathname}`);
+    }
   }, [user, router, pathname]);
 
-  if (!user) return null;
-
-  // Close drawer on route change
+  // Close drawer on route change - MOVED BEFORE EARLY RETURN
   useEffect(() => {
     setDrawerOpen(false);
   }, [pathname]);
+
+  // Early returns after all hooks are declared
+  if (!user) return null;
+
+  const currentLabel =
+    ACCOUNT_NAV.find(
+      (n) =>
+        pathname === n.href ||
+        (n.href !== "/account" && pathname.startsWith(n.href)),
+    )?.label ?? "My Account";
 
   return (
     <SocketProvider>
@@ -214,7 +225,7 @@ export default function AccountLayout({
               </Link>
             </div>
             <span className="text-sm text-gray-500 font-medium">
-              My Account
+              {currentLabel}
             </span>
           </div>
         </header>
