@@ -18,7 +18,7 @@ export const createOrder = async (formData: FormData) => {
 };
 
 // my orders — customer
-export const getMyOrders = async (params: {
+export const getMyOrders: any = async (params: {
   page?: number;
   limit?: number;
   status?: string;
@@ -102,6 +102,31 @@ export const updateOrderStatus = async (id: number, formData: FormData) => {
 export const getOrderStats = async () => {
   try {
     return await fetchWithAuth("/orders/stats");
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
+// Vendor
+
+// get all orders for vendor's products — vendor
+export const getVendorOrders = async (
+  vendorId: number,
+  params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    minAmount?: number;
+    maxAmount?: number;
+  } = {},
+) => {
+  try {
+    return await fetchWithAuth(
+      `/orders/vendor/${vendorId}${buildQuery(params)}`,
+    );
   } catch (error: any) {
     return Error(error);
   }

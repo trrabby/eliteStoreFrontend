@@ -55,7 +55,6 @@ function VendorNav({
   const handleLogout = async () => {
     await logout();
     dispatch(setLogout());
-    toast.info("Logged out");
     router.push("/login");
   };
   return (

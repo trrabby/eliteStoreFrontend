@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getMyProducts } from "@/services/product.service";
-import { getMyOrders } from "@/services/order.service";
+import { getVendorOrders } from "@/services/order.service";
 import { getMyVendorProfile } from "@/services/vendor.service";
 import { getLowStockVariantsByVendor } from "@/services/inventory.service";
 import { formatBDT } from "@/lib/utils/currency";
@@ -73,13 +73,13 @@ export default function VendorDashboardPage() {
       const vRes = await getMyVendorProfile();
       const [pRes, oRes, lRes] = await Promise.all([
         getMyProducts({ limit: 5, status: "ACTIVE" }),
-        getMyOrders({ limit: 5 }),
+        getVendorOrders(vRes.data.id, { limit: 5 }),
         getLowStockVariantsByVendor(vRes?.data?.id, {
           limit: 5,
           threshold: 10,
         }),
       ]);
-      // console.log(vRes, pRes, oRes, lRes);
+      console.log(vRes, pRes, oRes, lRes);
       if (vRes?.success) setVendor(vRes.data);
       if (pRes?.success) setProducts(pRes.data?.products ?? []);
       if (oRes?.success) setOrders(oRes.data?.orders ?? oRes.data ?? []);

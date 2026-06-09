@@ -19,6 +19,8 @@ import {
   CheckCircle,
   X,
   Plus,
+  SlidersHorizontal,
+  RotateCcw,
 } from "lucide-react";
 import {
   getAllVendorStockVariants,
@@ -39,6 +41,7 @@ interface FilterOptions {
   sortBy: string;
   minStock: string;
   maxStock: string;
+  threshold?: number;
 }
 
 export default function VendorInventoryPage() {
@@ -56,6 +59,7 @@ export default function VendorInventoryPage() {
     sortBy: "stock_asc",
     minStock: "",
     maxStock: "",
+    threshold: 10,
   });
   const [pagination, setPagination] = useState({
     page: 1,
@@ -86,7 +90,6 @@ export default function VendorInventoryPage() {
     };
 
     if (tab === "ALL") {
-      // Use getAllVendorStockVariants for ALL tab
       params.status = filters.status || undefined;
       params.sortBy = filters.sortBy || undefined;
       params.minStock = filters.minStock ? Number(filters.minStock) : undefined;
@@ -107,47 +110,88 @@ export default function VendorInventoryPage() {
         });
       }
     } else if (tab === "LOW_STOCK") {
-      // Use getLowStockVariantsByVendor for LOW_STOCK tab
+      params.threshold = filters.threshold || 10;
+
       const res = await getLowStockVariantsByVendor(vendorId, {
         page,
         limit: pagination.limit,
-        threshold: 10,
+        threshold: params.threshold,
       });
       if (res?.success) {
-        const data = res.data?.variants ?? res.data ?? [];
+        let data = res.data?.variants ?? res.data ?? [];
+
+        // Apply client-side filters for LOW_STOCK tab
+        if (filters.minStock) {
+          data = data.filter((v: any) => v.stock >= Number(filters.minStock));
+        }
+        if (filters.maxStock) {
+          data = data.filter((v: any) => v.stock <= Number(filters.maxStock));
+        }
+
+        // Apply client-side sorting
+        if (filters.sortBy) {
+          data = sortVariants(data, filters.sortBy);
+        }
+
         setVariants(data);
         setFilteredVariants(data);
         setPagination({
           ...pagination,
           page,
-          total: res.total || data.length,
-          totalPages:
-            res.totalPages ||
-            Math.ceil((res.total || data.length) / pagination.limit),
+          total: data.length,
+          totalPages: Math.ceil(data.length / pagination.limit),
         });
       }
     } else if (tab === "OUT_OF_STOCK") {
-      // Use getOutOfStockVariantsByVendor for OUT_OF_STOCK tab
       const res = await getOutOfStockVariantsByVendor(vendorId, {
         page,
         limit: pagination.limit,
       });
       if (res?.success) {
-        const data = res.data?.variants ?? res.data ?? [];
+        let data = res.data?.variants ?? res.data ?? [];
+
+        // Apply client-side sorting for OUT_OF_STOCK tab
+        if (filters.sortBy) {
+          data = sortVariants(data, filters.sortBy);
+        }
+
         setVariants(data);
         setFilteredVariants(data);
         setPagination({
           ...pagination,
           page,
-          total: res.total || data.length,
-          totalPages:
-            res.totalPages ||
-            Math.ceil((res.total || data.length) / pagination.limit),
+          total: data.length,
+          totalPages: Math.ceil(data.length / pagination.limit),
         });
       }
     }
 
     setLoading(false);
+  };
+
+  const sortVariants = (data: any[], sortBy: string) => {
+    return [...data].sort((a, b) => {
+      switch (sortBy) {
+        case "stock_asc":
+          return a.stock - b.stock;
+        case "stock_desc":
+          return b.stock - a.stock;
+        case "name_asc":
+          return (a.product?.name || "").localeCompare(b.product?.name || "");
+        case "name_desc":
+          return (b.product?.name || "").localeCompare(a.product?.name || "");
+        case "updatedAt_desc":
+          return (
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          );
+        case "updatedAt_asc":
+          return (
+            new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+          );
+        default:
+          return a.stock - b.stock;
+      }
+    });
   };
 
   useEffect(() => {
@@ -212,6 +256,7 @@ export default function VendorInventoryPage() {
       sortBy: "stock_asc",
       minStock: "",
       maxStock: "",
+      threshold: 10,
     });
     setSearchTerm("");
     setTimeout(() => {
@@ -225,6 +270,7 @@ export default function VendorInventoryPage() {
         label: "Out of Stock",
         color: "text-red-600",
         bg: "bg-red-50",
+        border: "border-red-200",
         icon: AlertCircle,
       };
     if (stock <= 5)
@@ -232,6 +278,7 @@ export default function VendorInventoryPage() {
         label: "Critical",
         color: "text-red-500",
         bg: "bg-red-50",
+        border: "border-red-200",
         icon: AlertTriangle,
       };
     if (stock <= 10)
@@ -239,12 +286,14 @@ export default function VendorInventoryPage() {
         label: "Low Stock",
         color: "text-amber-500",
         bg: "bg-amber-50",
+        border: "border-amber-200",
         icon: TrendingDown,
       };
     return {
       label: "In Stock",
       color: "text-green-500",
       bg: "bg-green-50",
+      border: "border-green-200",
       icon: CheckCircle,
     };
   };
@@ -254,6 +303,16 @@ export default function VendorInventoryPage() {
     critical: variants.filter((v) => v.stock > 0 && v.stock <= 5).length,
     low: variants.filter((v) => v.stock > 5 && v.stock <= 10).length,
     outOfStock: variants.filter((v) => v.stock === 0).length,
+  };
+
+  const activeFilterCount = () => {
+    let count = 0;
+    if (filters.status) count++;
+    if (filters.sortBy !== "stock_asc") count++;
+    if (filters.minStock) count++;
+    if (filters.maxStock) count++;
+    if (filters.threshold !== 10) count++;
+    return count;
   };
 
   return (
@@ -280,72 +339,72 @@ export default function VendorInventoryPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="bg-linear-to-br from-blue-50 to-white rounded-2xl border border-blue-100 p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Items</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
+              <p className="text-sm text-blue-600 font-medium">Total Items</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
                 {stats.total}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-              <Package size={20} className="text-blue-500" />
+            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+              <Package size={22} className="text-blue-500" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="bg-linear-to-br from-red-50 to-white rounded-2xl border border-red-100 p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Critical Stock</p>
-              <p className="text-2xl font-bold text-red-500 mt-1">
+              <p className="text-sm text-red-600 font-medium">Critical Stock</p>
+              <p className="text-3xl font-bold text-red-500 mt-1">
                 {stats.critical}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-              <AlertTriangle size={20} className="text-red-500" />
+            <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
+              <AlertTriangle size={22} className="text-red-500" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="bg-linear-to-br from-amber-50 to-white rounded-2xl border border-amber-100 p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Low Stock</p>
-              <p className="text-2xl font-bold text-amber-500 mt-1">
+              <p className="text-sm text-amber-600 font-medium">Low Stock</p>
+              <p className="text-3xl font-bold text-amber-500 mt-1">
                 {stats.low}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-              <TrendingDown size={20} className="text-amber-500" />
+            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+              <TrendingDown size={22} className="text-amber-500" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="bg-linear-to-br from-gray-50 to-white rounded-2xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Out of Stock</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
+              <p className="text-sm text-gray-600 font-medium">Out of Stock</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
                 {stats.outOfStock}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
-              <Package size={20} className="text-gray-500" />
+            <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center">
+              <Package size={22} className="text-gray-500" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Tabs and Search */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit">
           {(["ALL", "LOW_STOCK", "OUT_OF_STOCK"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={cn(
-                "px-5 py-2.5 rounded-lg text-sm font-medium transition-all",
+                "px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                 tab === t
                   ? "bg-white text-primary shadow-sm"
                   : "text-gray-500 hover:text-gray-700",
@@ -365,7 +424,7 @@ export default function VendorInventoryPage() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* Search */}
           <div className="relative">
             <Search
@@ -389,114 +448,249 @@ export default function VendorInventoryPage() {
             )}
           </div>
 
-          {/* Filter Button (only for ALL tab) */}
-          {tab === "ALL" && (
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(
-                "p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors",
-                showFilters && "bg-primary/10 border-primary text-primary",
-              )}
-            >
-              <Filter size={18} />
-            </button>
-          )}
+          {/* Filter Button */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              "relative inline-flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-200",
+              showFilters
+                ? "bg-primary text-white border-primary shadow-sm"
+                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50",
+            )}
+          >
+            <SlidersHorizontal size={16} />
+            <span className="text-sm font-medium">Filters</span>
+            {activeFilterCount() > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-xs rounded-full flex items-center justify-center">
+                {activeFilterCount()}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Filter Panel */}
-      {showFilters && tab === "ALL" && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl border border-gray-200 p-4 space-y-4"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="text-sm text-gray-600 mb-1 block">Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) =>
-                  setFilters({ ...filters, status: e.target.value })
-                }
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-              >
-                <option value="">All</option>
-                <option value="IN_STOCK">In Stock (&gt;10)</option>
-                <option value="LOW_STOCK">Low Stock (1-10)</option>
-                <option value="OUT_OF_STOCK">Out of Stock (0)</option>
-              </select>
-            </div>
+      {/* Elegant Filter Panel */}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+              <div className="bg-linear-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Filter size={18} className="text-primary" />
+                    <h3 className="font-semibold text-gray-900">
+                      Filter Options
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setShowFilters(false)}
+                    className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <X size={16} className="text-gray-400" />
+                  </button>
+                </div>
+              </div>
 
-            <div>
-              <label className="text-sm text-gray-600 mb-1 block">
-                Sort By
-              </label>
-              <select
-                value={filters.sortBy}
-                onChange={(e) =>
-                  setFilters({ ...filters, sortBy: e.target.value })
-                }
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-              >
-                <option value="stock_asc">Stock (Low to High)</option>
-                <option value="stock_desc">Stock (High to Low)</option>
-                <option value="name_asc">Name (A to Z)</option>
-                <option value="name_desc">Name (Z to A)</option>
-                <option value="updatedAt_desc">Recently Updated</option>
-                <option value="updatedAt_asc">Oldest Updated</option>
-              </select>
-            </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Status Filter - Only for ALL tab */}
+                  {tab === "ALL" && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">
+                        Stock Status
+                      </label>
+                      <select
+                        value={filters.status}
+                        onChange={(e) =>
+                          setFilters({ ...filters, status: e.target.value })
+                        }
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white"
+                      >
+                        <option value="">All Status</option>
+                        <option value="IN_STOCK">
+                          In Stock (&gt;10 units)
+                        </option>
+                        <option value="LOW_STOCK">
+                          Low Stock (1-10 units)
+                        </option>
+                        <option value="OUT_OF_STOCK">
+                          Out of Stock (0 units)
+                        </option>
+                      </select>
+                    </div>
+                  )}
 
-            <div>
-              <label className="text-sm text-gray-600 mb-1 block">
-                Min Stock
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={filters.minStock}
-                onChange={(e) =>
-                  setFilters({ ...filters, minStock: e.target.value })
-                }
-                placeholder="0"
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-              />
-            </div>
+                  {/* Threshold Filter - Only for LOW_STOCK tab */}
+                  {tab === "LOW_STOCK" && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">
+                        Low Stock Threshold
+                      </label>
+                      <select
+                        value={filters.threshold}
+                        onChange={(e) =>
+                          setFilters({
+                            ...filters,
+                            threshold: Number(e.target.value),
+                          })
+                        }
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white"
+                      >
+                        <option value={5}>≤ 5 units (Critical)</option>
+                        <option value={10}>≤ 10 units (Standard)</option>
+                        <option value={15}>≤ 15 units (Generous)</option>
+                        <option value={20}>≤ 20 units (Very Generous)</option>
+                      </select>
+                    </div>
+                  )}
 
-            <div>
-              <label className="text-sm text-gray-600 mb-1 block">
-                Max Stock
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={filters.maxStock}
-                onChange={(e) =>
-                  setFilters({ ...filters, maxStock: e.target.value })
-                }
-                placeholder="100"
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-              />
-            </div>
-          </div>
+                  {/* Sort By */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">
+                      Sort By
+                    </label>
+                    <select
+                      value={filters.sortBy}
+                      onChange={(e) =>
+                        setFilters({ ...filters, sortBy: e.target.value })
+                      }
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white"
+                    >
+                      <option value="stock_asc">Stock (Low to High)</option>
+                      <option value="stock_desc">Stock (High to Low)</option>
+                      <option value="name_asc">Product Name (A to Z)</option>
+                      <option value="name_desc">Product Name (Z to A)</option>
+                      <option value="updatedAt_desc">Recently Updated</option>
+                      <option value="updatedAt_asc">Oldest Updated</option>
+                    </select>
+                  </div>
 
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={clearFilters}
-              className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors"
-            >
-              Clear All
-            </button>
-            <button
-              onClick={applyFilters}
-              className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors"
-            >
-              Apply Filters
-            </button>
-          </div>
-        </motion.div>
-      )}
+                  {/* Stock Range */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">
+                      Stock Range
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        value={filters.minStock}
+                        onChange={(e) =>
+                          setFilters({ ...filters, minStock: e.target.value })
+                        }
+                        placeholder="Min"
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                      />
+                      <span className="text-gray-400 self-center">-</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={filters.maxStock}
+                        onChange={(e) =>
+                          setFilters({ ...filters, maxStock: e.target.value })
+                        }
+                        placeholder="Max"
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Active Filters Display */}
+                {activeFilterCount() > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-gray-500">
+                        Active filters:
+                      </span>
+                      {filters.status && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-lg">
+                          Status: {filters.status.replace("_", " ")}
+                          <button
+                            onClick={() =>
+                              setFilters({ ...filters, status: "" })
+                            }
+                            className="hover:text-primary-dark"
+                          >
+                            <X size={10} />
+                          </button>
+                        </span>
+                      )}
+                      {filters.sortBy !== "stock_asc" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-lg">
+                          Sort: {filters.sortBy.replace("_", " ")}
+                          <button
+                            onClick={() =>
+                              setFilters({ ...filters, sortBy: "stock_asc" })
+                            }
+                            className="hover:text-primary-dark"
+                          >
+                            <X size={10} />
+                          </button>
+                        </span>
+                      )}
+                      {(filters.minStock || filters.maxStock) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-lg">
+                          Stock: {filters.minStock || "0"} -{" "}
+                          {filters.maxStock || "∞"}
+                          <button
+                            onClick={() =>
+                              setFilters({
+                                ...filters,
+                                minStock: "",
+                                maxStock: "",
+                              })
+                            }
+                            className="hover:text-primary-dark"
+                          >
+                            <X size={10} />
+                          </button>
+                        </span>
+                      )}
+                      {filters.threshold !== 10 && tab === "LOW_STOCK" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-lg">
+                          Threshold: ≤{filters.threshold}
+                          <button
+                            onClick={() =>
+                              setFilters({ ...filters, threshold: 10 })
+                            }
+                            className="hover:text-primary-dark"
+                          >
+                            <X size={10} />
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+                  <button
+                    onClick={clearFilters}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    <RotateCcw size={14} />
+                    Reset All
+                  </button>
+                  <button
+                    onClick={applyFilters}
+                    className="inline-flex items-center gap-2 px-6 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-all shadow-sm hover:shadow-md"
+                  >
+                    <CheckCircle size={14} />
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Loading State */}
       {loading ? (
@@ -553,7 +747,7 @@ export default function VendorInventoryPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className="bg-white rounded-2xl border border-gray-200 hover:shadow-md transition-shadow p-4"
+                    className="bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-all duration-300 p-4"
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                       {/* Product Image */}
@@ -586,9 +780,10 @@ export default function VendorInventoryPage() {
                         <div className="flex items-center gap-3 flex-wrap">
                           <div
                             className={cn(
-                              "inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium",
+                              "inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium border",
                               status.bg,
                               status.color,
+                              status.border,
                             )}
                           >
                             <StatusIcon size={12} />
@@ -642,7 +837,7 @@ export default function VendorInventoryPage() {
                         <button
                           onClick={() => handleRestock(v)}
                           disabled={updating[v.id]}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark transition-all disabled:opacity-50"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark transition-all disabled:opacity-50 shadow-sm hover:shadow-md"
                         >
                           {updating[v.id] ? (
                             <RefreshCw size={14} className="animate-spin" />
@@ -669,9 +864,38 @@ export default function VendorInventoryPage() {
               >
                 Previous
               </button>
-              <span className="text-sm text-gray-600">
-                Page {pagination.page} of {pagination.totalPages}
-              </span>
+              <div className="flex items-center gap-2">
+                {Array.from(
+                  { length: Math.min(5, pagination.totalPages) },
+                  (_, i) => {
+                    let pageNum = pagination.page;
+                    if (pagination.totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (pagination.page <= 3) {
+                      pageNum = i + 1;
+                    } else if (pagination.page >= pagination.totalPages - 2) {
+                      pageNum = pagination.totalPages - 4 + i;
+                    } else {
+                      pageNum = pagination.page - 2 + i;
+                    }
+
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => loadVariants(pageNum)}
+                        className={cn(
+                          "w-8 h-8 rounded-lg text-sm font-medium transition-colors",
+                          pagination.page === pageNum
+                            ? "bg-primary text-white"
+                            : "text-gray-600 hover:bg-gray-100",
+                        )}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  },
+                )}
+              </div>
               <button
                 onClick={() => loadVariants(pagination.page + 1)}
                 disabled={pagination.page === pagination.totalPages}

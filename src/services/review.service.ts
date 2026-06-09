@@ -34,6 +34,32 @@ export const getReviewById = async (id: number) => {
   }
 };
 
+// get all reviews by vendor - vendor
+export const getAllReviewsByVendor = async (
+  vendorId: number,
+  params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    productId?: number;
+    rating?: number;
+    search?: string;
+    sortBy?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    hasResponse?: boolean;
+    withImages?: boolean;
+  },
+) => {
+  try {
+    return await fetchWithAuth(
+      `/reviews/vendor/${vendorId}${buildQuery(params)}`,
+    );
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
 // my reviews — customer
 export const getMyReviews = async (params: {
   page?: number;
