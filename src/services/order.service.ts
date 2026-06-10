@@ -131,3 +131,23 @@ export const getVendorOrders = async (
     return Error(error);
   }
 };
+
+// get my vendor orders — authenticated vendor
+export const getMyVendorOrders = async (
+  params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    minAmount?: number;
+    maxAmount?: number;
+  } = {},
+) => {
+  try {
+    return await fetchWithAuth(`/orders/vendor/my-orders${buildQuery(params)}`);
+  } catch (error: any) {
+    return Error(error);
+  }
+};
