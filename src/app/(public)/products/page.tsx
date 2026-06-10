@@ -13,8 +13,20 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "All Products",
-  description: "Browse thousands of products on Elite Store",
+  title: "Elite Store — Feel the Elegance",
+  description:
+    "Bangladesh's premier multi-vendor online shopping destination. Shop fashion, electronics, home & more. Free delivery on orders over ৳1000.",
+  keywords:
+    "online shopping Bangladesh, buy online BD, elite store, fashion, electronics, home goods, BDT",
+  openGraph: {
+    title: "Elite Store — Feel the Elegance",
+    description:
+      "Bangladesh's premier multi-vendor online shopping destination.",
+    type: "website",
+    locale: "en_BD",
+    siteName: "Elite Store",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 // SSR — no cache, filters are dynamic

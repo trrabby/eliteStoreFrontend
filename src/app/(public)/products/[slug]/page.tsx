@@ -25,24 +25,46 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-
   const res = await getProductBySlug(slug);
+  if (!res?.success || !res.data)
+    return { title: "Product Not Found | Elite Store" };
 
-  const p = res?.data;
-
-  if (!p) {
-    return {
-      title: "Product Not Found",
-    };
-  }
+  const product = res.data;
+  const price = product.variants?.[0]?.price;
+  const image = product.images?.[0]?.url;
 
   return {
-    title: p.name,
-    description: p.shortDescription ?? p.description?.slice(0, 160),
-
+    title: `${product.name} | Elite Store`,
+    description:
+      product.shortDescription ??
+      `Buy ${product.name} at the best price in Bangladesh. Free delivery on orders over ৳1000.`,
+    keywords: [
+      product.name,
+      product.brand?.name,
+      product.category?.name,
+      "Bangladesh",
+      "online shopping",
+    ]
+      .filter(Boolean)
+      .join(", "),
     openGraph: {
-      title: `${p.name} | Elite Store`,
-      images: p.images?.[0]?.url ? [p.images[0].url] : [],
+      title: product.name,
+      description:
+        product.shortDescription ?? `৳${price} — Shop now at Elite Store`,
+      images: image
+        ? [{ url: image, width: 800, height: 800, alt: product.name }]
+        : [],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: product.name,
+      description: product.shortDescription ?? "",
+      images: image ? [image] : [],
+    },
+    other: {
+      "product:price:amount": String(price ?? 0),
+      "product:price:currency": "BDT",
     },
   };
 }
