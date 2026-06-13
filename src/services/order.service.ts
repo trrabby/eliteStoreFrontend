@@ -48,7 +48,7 @@ export const trackOrder = async (orderNumber: string) => {
   }
 };
 
-// cancel order — customer
+// cancel order — customer/vendor/admin
 export const cancelOrder = async (id: number, formData: FormData) => {
   try {
     return await fetchWithAuth(`/orders/my-orders/${id}/cancel`, {
@@ -79,7 +79,7 @@ export const getAllOrders = async (params: {
   }
 };
 
-export const getOrderByIdAdmin = async (id: number) => {
+export const getOrderById = async (id: number) => {
   try {
     return await fetchWithAuth(`/orders/${id}`);
   } catch (error: any) {
@@ -87,9 +87,19 @@ export const getOrderByIdAdmin = async (id: number) => {
   }
 };
 
+export const getOrderStats = async () => {
+  try {
+    return await fetchWithAuth("/orders/stats");
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
+// Vendor & Admin
+
 export const updateOrderStatus = async (id: number, formData: FormData) => {
   try {
-    return await fetchWithAuth(`/orders/${id}/status`, {
+    return await fetchWithAuth(`/orders/single/${id}/status`, {
       method: "PATCH",
       headers: {},
       body: formData,
@@ -99,9 +109,13 @@ export const updateOrderStatus = async (id: number, formData: FormData) => {
   }
 };
 
-export const getOrderStats = async () => {
+export const updateOrderStatusBulk = async (formData: FormData) => {
   try {
-    return await fetchWithAuth("/orders/stats");
+    return await fetchWithAuth(`/orders/bulk/status`, {
+      method: "PATCH",
+      headers: {},
+      body: formData,
+    });
   } catch (error: any) {
     return Error(error);
   }

@@ -17,7 +17,7 @@ export const trackByTrackingNumber = async (trackingNumber: string) => {
   }
 };
 
-// get shipment for an order — customer/admin
+// get shipment for an order — auth users
 export const getShipmentByOrderId = async (orderId: number) => {
   try {
     return await fetchWithAuth(`/shipments/order/${orderId}`);
@@ -26,17 +26,8 @@ export const getShipmentByOrderId = async (orderId: number) => {
   }
 };
 
-// ─── Admin ────────────────────────────────
-
-export const getShipmentStats = async () => {
-  try {
-    return await fetchWithAuth("/shipments/stats");
-  } catch (error: any) {
-    return Error(error);
-  }
-};
-
-export const getAllShipments = async (params: {
+//Admin and vendors
+export const getVendorShipments = async (params: {
   page?: number;
   limit?: number;
   carrier?: string;
@@ -45,7 +36,7 @@ export const getAllShipments = async (params: {
   dateTo?: string;
 }) => {
   try {
-    return await fetchWithAuth(`/shipments${buildQuery(params)}`);
+    return await fetchWithAuth(`/shipments/vendor${buildQuery(params)}`);
   } catch (error: any) {
     return Error(error);
   }
@@ -101,7 +92,32 @@ export const markDelivered = async (formData: FormData) => {
   }
 };
 
-// ─── Steadfast ────────────────────────────
+// ─── Admin ────────────────────────────────
+
+export const getShipmentStats = async () => {
+  try {
+    return await fetchWithAuth("/shipments/stats");
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
+export const getAllShipments = async (params: {
+  page?: number;
+  limit?: number;
+  carrier?: string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}) => {
+  try {
+    return await fetchWithAuth(`/shipments${buildQuery(params)}`);
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
+// ─── Steadfast ──── admin and vendor────────────────────────
 
 export const createSteadfastShipments = async (formData: FormData) => {
   try {
@@ -126,6 +142,8 @@ export const syncSteadfastStatuses = async (formData: FormData) => {
     return Error(error);
   }
 };
+
+// admin
 
 export const getSteadfastBalance = async () => {
   try {
