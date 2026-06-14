@@ -24,8 +24,8 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
-  const res = await getProductBySlug(slug);
+  const { slug: productSlug } = await params;
+  const res = await getProductBySlug(productSlug);
   if (!res?.success || !res.data)
     return { title: "Product Not Found | Elite Store" };
 
@@ -70,9 +70,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductDetailPage({ params }: Props) {
-  const { slug } = await params;
+  const { slug: productSlug } = await params;
 
-  const res = await getProductBySlug(slug);
+  const res = await getProductBySlug(productSlug);
 
   if (!res?.success || !res?.data) {
     notFound();

@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/rules-of-hooks */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -22,6 +24,10 @@ import { formatBDT } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 import Image from "next/image";
+import { useLogout } from "@/lib/hooks/useLogout";
+import { useAppDispatch } from "@/store/hook";
+import { useRouter } from "next/navigation";
+import { setLogout } from "@/store/slices/authSlice";
 
 function StatCard({
   icon: Icon,
@@ -67,10 +73,21 @@ export default function VendorDashboardPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [lowStock, setLowStock] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const logout = useLogout();
+  const dispatch = useAppDispatch();
+  const router = useRouter();
 
   useEffect(() => {
     const load = async () => {
       const vRes = await getMyVendorProfile();
+      // console.log(vRes);
+      if (!vRes?.success && vRes?.message === "Please log in again") {
+        await logout;
+        dispatch(setLogout());
+        router.push("/login");
+        return;
+      }
+
       const [pRes, oRes, lRes] = await Promise.all([
         getMyProducts({ limit: 5, status: "ACTIVE" }),
         getVendorOrders(vRes.data.id, { limit: 5 }),
@@ -79,7 +96,8 @@ export default function VendorDashboardPage() {
           threshold: 10,
         }),
       ]);
-      console.log(vRes, pRes, oRes, lRes);
+      // console.log(vRes, pRes, oRes, lRes);
+
       if (vRes?.success) setVendor(vRes.data);
       if (pRes?.success) setProducts(pRes.data?.products ?? []);
       if (oRes?.success) setOrders(oRes.data?.orders ?? oRes.data ?? []);

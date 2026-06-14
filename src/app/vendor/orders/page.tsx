@@ -6,10 +6,8 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Link from "next/link";
 import {
   ShoppingCart,
-  ChevronRight,
   Search,
   Filter,
   X,
@@ -39,6 +37,7 @@ import { formatDate } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import Image from "next/image";
+import { usePrintInvoice } from "@/lib/hooks/usePrintInvoice";
 
 const STATUS_TABS = [
   "ALL",
@@ -84,7 +83,7 @@ const isValidStatusTransition = (current: string, next: string): boolean => {
     PROCESSING: ["SHIPPED", "CANCELLED"],
     SHIPPED: ["OUT_FOR_DELIVERY", "DELIVERED"],
     OUT_FOR_DELIVERY: ["DELIVERED"],
-    DELIVERED: ["RETURN_REQUESTED"],
+    DELIVERED: [],
     RETURN_REQUESTED: ["RETURNED", "DELIVERED"],
     RETURNED: ["REFUNDED"],
     CANCELLED: [],
@@ -136,7 +135,7 @@ export default function VendorOrdersPage() {
   const [maxAmount, setMaxAmount] = useState("");
   const [selectedOrders, setSelectedOrders] = useState<Set<number>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
-
+  const { printInvoices } = usePrintInvoice();
   // Single shipment modal
   const [shipmentModalOpen, setShipmentModalOpen] = useState(false);
   const [shipmentOrderId, setShipmentOrderId] = useState<number | null>(null);
@@ -735,6 +734,15 @@ export default function VendorOrdersPage() {
     return { imageUrl, totalQty, variantNames };
   };
 
+  const handlePrintInvoices = () => {
+    if (selectedOrders.size === 0) {
+      toast.error("Select at least one order to print invoices");
+      return;
+    }
+    const selectedOrdersList = orders.filter((o) => selectedOrders.has(o.id));
+    printInvoices(selectedOrdersList);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -973,6 +981,14 @@ export default function VendorOrdersPage() {
                       Create Shipments
                     </button>
                   )}
+
+                  <button
+                    onClick={handlePrintInvoices}
+                    disabled={bulkActionLoading}
+                    className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    Print Invoices
+                  </button>
                   <button
                     onClick={() => setSelectedOrders(new Set())}
                     className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 text-xs hover:bg-gray-50"

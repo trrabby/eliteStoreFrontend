@@ -14,10 +14,10 @@ export const formatBDT = (
     const bn = formatted.replace(/[0-9]/g, (d) =>
       String.fromCharCode(0x09e6 + parseInt(d)),
     );
-    return showSymbol ? `৳${bn}` : bn;
+    return showSymbol ? `৳ ${bn}` : bn;
   }
 
-  return showSymbol ? `৳${formatted}` : formatted;
+  return showSymbol ? `৳ ${formatted}` : formatted;
 };
 
 export const discountPercent = (
