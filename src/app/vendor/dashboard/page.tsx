@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable react-hooks/rules-of-hooks */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -17,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getMyProducts } from "@/services/product.service";
-import { getVendorOrders } from "@/services/order.service";
+import { getMyVendorOrders } from "@/services/order.service";
 import { getMyVendorProfile } from "@/services/vendor.service";
 import { getLowStockVariantsByVendor } from "@/services/inventory.service";
 import { formatBDT } from "@/lib/utils/currency";
@@ -90,13 +89,13 @@ export default function VendorDashboardPage() {
 
       const [pRes, oRes, lRes] = await Promise.all([
         getMyProducts({ limit: 5, status: "ACTIVE" }),
-        getVendorOrders(vRes.data.id, { limit: 5 }),
+        getMyVendorOrders(),
         getLowStockVariantsByVendor(vRes?.data?.id, {
           limit: 5,
           threshold: 10,
         }),
       ]);
-      // console.log(vRes, pRes, oRes, lRes);
+      console.log(vRes, pRes, oRes, lRes);
 
       if (vRes?.success) setVendor(vRes.data);
       if (pRes?.success) setProducts(pRes.data?.products ?? []);
@@ -109,9 +108,11 @@ export default function VendorDashboardPage() {
 
   const totalRevenue = orders
     .filter((o) => o.status === "DELIVERED")
-    .reduce((s, o) => s + Number(o.totalAmount ?? 0), 0);
+    .reduce((s, o) => s + Number(o.total ?? 0), 0);
 
   const pendingOrders = orders.filter((o) => o.status === "PENDING").length;
+  const shippedOrders = orders.filter((o) => o.status === "SHIPPED").length;
+  const deliveredOrders = orders.filter((o) => o.status === "DELIVERED").length;
 
   if (loading)
     return (
@@ -207,7 +208,7 @@ export default function VendorDashboardPage() {
           icon={ShoppingCart}
           label="Total Orders"
           value={orders.length}
-          sub={`${pendingOrders} pending`}
+          sub={`${pendingOrders} pending | ${shippedOrders} shipped`}
           color="border-blue-400"
           href="/vendor/orders"
         />
@@ -222,7 +223,7 @@ export default function VendorDashboardPage() {
           icon={Star}
           label="Store Rating"
           value={vendor?.rating ? Number(vendor.rating).toFixed(1) : "—"}
-          sub={`${vendor?.totalSales ?? 0} sales`}
+          sub={`${deliveredOrders ?? 0} sales`}
           color="border-amber-400"
         />
       </div>
@@ -307,7 +308,7 @@ export default function VendorDashboardPage() {
                   className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0"
                 >
                   <div>
-                    <p className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
+                    <p className="text-sm font-medium text-gray-900 truncate max-w-50">
                       {variant.product?.name ?? "—"}
                     </p>
                     <p className="text-xs text-gray-400">SKU: {variant.sku}</p>
@@ -349,7 +350,7 @@ export default function VendorDashboardPage() {
             >
               <div className="relative aspect-square rounded-xl overflow-hidden bg-primary-pale mb-2">
                 {p.images?.[0]?.url ? (
-                  <img
+                  <Image
                     src={p.images[0].url}
                     alt={p.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"

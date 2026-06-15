@@ -309,7 +309,7 @@ export default function VendorOrderDetailsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
+      <div className="flex justify-center items-center min-h-100">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
@@ -722,7 +722,7 @@ export default function VendorOrderDetailsPage() {
                 Order Timeline
               </h3>
             </div>
-            <div className="p-4 max-h-[320px] overflow-y-auto">
+            <div className="p-4 max-h-80 overflow-y-auto">
               {timeline.length === 0 ? (
                 <p className="text-center text-gray-500 text-sm">No history</p>
               ) : (

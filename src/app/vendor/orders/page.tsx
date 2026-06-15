@@ -20,6 +20,10 @@ import {
   CheckSquare,
   Square,
   Truck,
+  CheckCircle,
+  PrinterIcon,
+  FileDownIcon,
+  Trash2Icon,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import {
@@ -37,7 +41,11 @@ import { formatDate } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import Image from "next/image";
-import { usePrintInvoice } from "@/lib/hooks/usePrintInvoice";
+
+import {
+  exportToExcel,
+  printInvoices,
+} from "@/lib/utils/exportOrdersAndPrintInvoice";
 
 const STATUS_TABS = [
   "ALL",
@@ -135,7 +143,6 @@ export default function VendorOrdersPage() {
   const [maxAmount, setMaxAmount] = useState("");
   const [selectedOrders, setSelectedOrders] = useState<Set<number>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
-  const { printInvoices } = usePrintInvoice();
   // Single shipment modal
   const [shipmentModalOpen, setShipmentModalOpen] = useState(false);
   const [shipmentOrderId, setShipmentOrderId] = useState<number | null>(null);
@@ -734,15 +741,6 @@ export default function VendorOrdersPage() {
     return { imageUrl, totalQty, variantNames };
   };
 
-  const handlePrintInvoices = () => {
-    if (selectedOrders.size === 0) {
-      toast.error("Select at least one order to print invoices");
-      return;
-    }
-    const selectedOrdersList = orders.filter((o) => selectedOrders.has(o.id));
-    printInvoices(selectedOrdersList);
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -965,8 +963,9 @@ export default function VendorOrdersPage() {
                     <button
                       onClick={() => handleBulkStatusUpdate(commonNextStatus)}
                       disabled={bulkActionLoading}
-                      className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-light text-white text-xs font-medium hover:bg-primary disabled:opacity-50"
                     >
+                      <CheckCircle size={14} />
                       {commonNextStatus === "CONFIRMED"
                         ? "Confirm Selected"
                         : `Move to ${commonNextStatus}`}
@@ -976,23 +975,46 @@ export default function VendorOrdersPage() {
                     <button
                       onClick={openBulkShipmentModal}
                       disabled={bulkActionLoading}
-                      className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700 disabled:opacity-50"
                     >
+                      <Truck size={14} />
                       Create Shipments
                     </button>
                   )}
 
                   <button
-                    onClick={handlePrintInvoices}
+                    onClick={() => {
+                      const selectedOrdersList = orders.filter((o) =>
+                        selectedOrders.has(o.id),
+                      );
+                      printInvoices(selectedOrdersList);
+                    }}
                     disabled={bulkActionLoading}
-                    className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/90 text-white text-xs font-medium hover:bg-primary cursor-pointer disabled:opacity-50"
                   >
+                    <PrinterIcon size={14} />
                     Print Invoices
                   </button>
+
+                  <button
+                    onClick={() => {
+                      const selectedOrdersList = orders.filter((o) =>
+                        selectedOrders.has(o.id),
+                      );
+                      exportToExcel(selectedOrdersList, dateFrom, dateTo);
+                    }}
+                    disabled={bulkActionLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    <FileDownIcon size={14} />
+                    Export Excel
+                  </button>
+
                   <button
                     onClick={() => setSelectedOrders(new Set())}
-                    className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 text-xs hover:bg-gray-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-500 text-white text-xs font-medium hover:bg-red-600 disabled:opacity-50 cursor-pointer duration-300"
                   >
+                    <Trash2Icon size={14} />
                     Clear
                   </button>
                 </>
