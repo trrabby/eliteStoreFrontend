@@ -29,6 +29,7 @@ export function useCart() {
   const fetchCart = async () => {
     if (!user) return;
     const res = await getCart();
+    console.log(res);
     if (res?.success && Array.isArray(res.data?.items)) {
       dispatch(setItemsFromDB(res.data.items));
     }

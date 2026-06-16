@@ -2,6 +2,7 @@
 "use server";
 import { config } from "@/config";
 import { cookies } from "next/headers";
+import { serverLogout } from "./auth.service";
 
 // ─────────────────────────────────────────
 // Core fetch wrapper with auto token refresh
@@ -123,7 +124,7 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   }
 
   const data = await res.json();
-  // console.log(data);
+  console.log(data);
   // safety guard
   if (!accessToken) {
     return {

@@ -21,10 +21,12 @@ import {
   Shield,
   Truck,
   CreditCard,
+  Store,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppSelector, useAppDispatch } from "@/store/hook";
 import { selectCurrentUser } from "@/store/slices/authSlice";
+
 import {
   selectCheckout,
   setAddress,
@@ -32,7 +34,8 @@ import {
   removeCoupon,
   setNotes,
 } from "@/store/slices/checkoutSlice";
-import { useCart } from "@/lib/hooks/useCart";
+
+import { useCartDisplay } from "@/lib/hooks/useCartDisplay";
 import { applyCoupon } from "@/services/coupon.service";
 import { getMyAddresses } from "@/services/user.service";
 import { CheckoutProgress } from "@/components/checkout/CheckoutProgress";
@@ -41,6 +44,8 @@ import { formatBDT } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils/cn";
 import type { IAddress } from "@/types/user.types";
 import { AddressFormModal } from "@/components/checkout/AddressFormModal";
+import { computeVendorShipping } from "@/lib/utils/cart";
+import { getBaseShippingRate } from "@/lib/utils/shipping";
 
 const getAddressIcon = (type?: string) => {
   switch (type?.toLowerCase()) {
@@ -54,12 +59,28 @@ const getAddressIcon = (type?: string) => {
   }
 };
 
+// Free shipping threshold (total order subtotal)
+const FREE_SHIPPING_THRESHOLD = 4000;
+
 export default function CheckoutAddressPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectCurrentUser);
   const checkout = useAppSelector(selectCheckout);
-  const { subtotal } = useCart();
+  const defaultAddress = user?.defaultAddress;
+
+  // Cart data for shipping calculation
+  const { displayItems, subtotal } = useCartDisplay();
+
+  // Compute base shipping rate from the default address (if logged in)
+  const baseRate = user ? getBaseShippingRate(defaultAddress) : 130;
+
+  // Compute vendor-wise shipping
+  const { totalShipping, vendorCount } = computeVendorShipping(
+    displayItems,
+    baseRate,
+    FREE_SHIPPING_THRESHOLD,
+  );
 
   const [addresses, setAddresses] = useState<IAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
@@ -171,9 +192,8 @@ export default function CheckoutAddressPage() {
   };
 
   const subtotalAmount = Number(subtotal) || 0;
-  const shippingFee = subtotalAmount >= 1000 ? 0 : 60;
   const discount = Number(checkout.couponDiscount) || 0;
-  const total = Math.max(0, subtotalAmount + shippingFee - discount);
+  const total = Math.max(0, subtotalAmount + totalShipping - discount);
 
   if (!user) return null;
 
@@ -510,6 +530,17 @@ export default function CheckoutAddressPage() {
             </div>
 
             <div className="p-6">
+              {/* Vendor count notice */}
+              {vendorCount > 1 && (
+                <div className="mb-4 flex items-center gap-2 rounded-xl bg-blue-50 p-2.5 text-xs text-blue-700">
+                  <Store size={14} className="flex-shrink-0" />
+                  <span>
+                    Items from {vendorCount} vendors – shipping charges applied
+                    per vendor.
+                  </span>
+                </div>
+              )}
+
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
@@ -530,13 +561,13 @@ export default function CheckoutAddressPage() {
 
                 <div className="flex justify-between text-gray-600">
                   <span>Delivery Charge</span>
-                  {subtotalAmount >= 1000 ? (
+                  {totalShipping === 0 ? (
                     <span className="font-medium text-green-600 flex items-center gap-1">
                       FREE
                     </span>
                   ) : (
                     <span className="font-medium">
-                      {formatBDT(shippingFee)}
+                      {formatBDT(totalShipping)}
                     </span>
                   )}
                 </div>

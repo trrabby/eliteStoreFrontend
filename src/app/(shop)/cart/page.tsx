@@ -1,17 +1,12 @@
 /* eslint-disable react/no-unescaped-entities */
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  ShoppingBag,
-  ArrowRight,
-  Trash2,
-  RefreshCw,
-  LogIn,
-} from "lucide-react";
+import { ArrowRight, Trash2, RefreshCw, LogIn, Store } from "lucide-react";
+import { useSelector } from "react-redux";
 import { useCart } from "@/lib/hooks/useCart";
 import { useCartDisplay } from "@/lib/hooks/useCartDisplay";
 import { useAppSelector } from "@/store/hook";
@@ -20,6 +15,8 @@ import { CartItem } from "@/components/cart/CartItem";
 import { formatBDT } from "@/lib/utils/currency";
 import { MagneticButton } from "@/components/shared/MagneticButton";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { computeVendorShipping } from "@/lib/utils/cart";
+import { getBaseShippingRate } from "@/lib/utils/shipping";
 import dynamic from "next/dynamic";
 
 const Player = dynamic(
@@ -27,23 +24,48 @@ const Player = dynamic(
   { ssr: false },
 );
 
-const FREE_SHIPPING_THRESHOLD = 1000;
+const FREE_SHIPPING_THRESHOLD = 4000;
 
 export default function CartPage() {
   const router = useRouter();
   const user = useAppSelector(selectCurrentUser);
+  const defaultAddress = user?.defaultAddress;
   const { itemCount, clearCart, fetchCart } = useCart();
   const { displayItems, loading, subtotal, savings } = useCartDisplay();
 
+  const baseRate = user ? getBaseShippingRate(defaultAddress) : 130;
+  const { totalShipping, vendorCount } = computeVendorShipping(
+    displayItems,
+    baseRate,
+    FREE_SHIPPING_THRESHOLD,
+  );
+  const total = subtotal + totalShipping;
+  const freeShipping = totalShipping === 0;
+
+  // Group items by vendor
+  const groupedItems = useMemo(() => {
+    const groups: Record<
+      number,
+      { vendorId: number; vendorName: string; items: typeof displayItems }
+    > = {};
+    for (const item of displayItems) {
+      const key = item.vendorId;
+      if (!groups[key]) {
+        groups[key] = {
+          vendorId: item.vendorId,
+          vendorName: item.vendorName,
+          items: [],
+        };
+      }
+      groups[key].items.push(item);
+    }
+    return Object.values(groups);
+  }, [displayItems]);
+
   useEffect(() => {
-    // Sync with server on mount (auth only)
     if (user) fetchCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
-
-  const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 60;
-  const total = subtotal + shippingFee;
-  const freeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
 
   if (itemCount === 0) {
     return (
@@ -141,16 +163,31 @@ export default function CartPage() {
                 ))}
               </div>
             ) : (
-              <AnimatePresence mode="popLayout">
-                {displayItems.map((item) => (
-                  <CartItem key={item.variantId} item={item} />
+              <div className="divide-y divide-gray-100">
+                {groupedItems.map((group) => (
+                  <div key={group.vendorId} className="py-3 first:pt-0">
+                    {/* Vendor header */}
+                    <div className="flex items-center gap-2 px-4 pb-2 text-sm font-medium text-gray-700">
+                      <Store size={16} className="text-primary" />
+                      <span>{group.vendorName}</span>
+                      <span className="text-xs text-gray-400 ml-auto">
+                        {group.items.reduce((sum, i) => sum + i.quantity, 0)}{" "}
+                        items
+                      </span>
+                    </div>
+                    <AnimatePresence mode="popLayout">
+                      {group.items.map((item) => (
+                        <CartItem key={item.variantId} item={item} />
+                      ))}
+                    </AnimatePresence>
+                  </div>
                 ))}
-              </AnimatePresence>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Summary */}
+        {/* Summary - unchanged, uses vendorCount and totalShipping */}
         <div className="lg:col-span-1">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -195,6 +232,13 @@ export default function CartPage() {
               </div>
             )}
 
+            {vendorCount > 1 && (
+              <div className="bg-blue-50 text-blue-700 rounded-xl p-2.5 text-xs">
+                Items from {vendorCount} vendors – shipping charges applied per
+                vendor.
+              </div>
+            )}
+
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal ({itemCount} items)</span>
@@ -211,7 +255,7 @@ export default function CartPage() {
                 {freeShipping ? (
                   <span className="text-green-600 font-medium">FREE</span>
                 ) : (
-                  <span>{formatBDT(shippingFee)}</span>
+                  <span>{formatBDT(totalShipping)}</span>
                 )}
               </div>
               <div className="flex justify-between font-bold text-gray-900 text-base pt-2 border-t border-gray-100">

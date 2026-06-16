@@ -1,21 +1,24 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ShoppingBag, LogIn } from "lucide-react";
+import { X, ShoppingBag, LogIn, StoreIcon } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { RootState } from "@/store";
 import { toggleCart } from "@/store/slices/uiSlice";
 import { CartItem } from "./CartItem";
 import { CartSummary } from "./CartSummary";
-import { useCartDisplay } from "@/lib/hooks/useCartDisplay";
+import { DisplayCartItem, useCartDisplay } from "@/lib/hooks/useCartDisplay";
 import { useCart } from "@/lib/hooks/useCart";
-import { formatBDT } from "@/lib/utils/currency";
 import { useAppSelector } from "@/store/hook";
 import { selectCurrentUser } from "@/store/slices/authSlice";
+import { formatBDT } from "@/lib/utils/currency";
+import { computeVendorShipping } from "@/lib/utils/cart";
+import { getBaseShippingRate } from "@/lib/utils/shipping";
 
 const Player = dynamic(
   () => import("@lottiefiles/react-lottie-player").then((m) => m.Player),
@@ -27,8 +30,11 @@ export function CartDrawer() {
   const router = useRouter();
   const user = useAppSelector(selectCurrentUser);
   const isCartOpen = useSelector((s: RootState) => s.ui.isCartOpen);
-  const { itemCount } = useCart();
+  const cart = useSelector((state: RootState) => state.cart);
+  const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
   const { displayItems, loading, subtotal, savings } = useCartDisplay();
+  const defaultAddress = user?.defaultAddress;
+  const baseRate = getBaseShippingRate(defaultAddress);
 
   // Close on Escape
   useEffect(() => {
@@ -41,11 +47,31 @@ export function CartDrawer() {
 
   // Lock body scroll
   useEffect(() => {
+    // console.log({ CartDrawer: displayItems, itemCount });
     document.body.style.overflow = isCartOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
   }, [isCartOpen]);
+
+  const groupedItems = useMemo(() => {
+    const groups: Record<
+      number,
+      { vendorId: number; vendorName: string; items: typeof displayItems }
+    > = {};
+    for (const item of displayItems) {
+      const key = item.vendorId;
+      if (!groups[key]) {
+        groups[key] = {
+          vendorId: item.vendorId,
+          vendorName: item.vendorName,
+          items: [],
+        };
+      }
+      groups[key].items.push(item);
+    }
+    return Object.values(groups);
+  }, [displayItems]);
 
   return (
     <AnimatePresence>
@@ -160,23 +186,48 @@ export function CartDrawer() {
                   )}
                 </div>
               ) : (
+                // In the items section, replace the direct mapping with grouped rendering:
                 <div className="py-2">
-                  <AnimatePresence mode="popLayout">
-                    {displayItems.map((item) => (
-                      <CartItem key={item.variantId} item={item} />
-                    ))}
-                  </AnimatePresence>
+                  {groupedItems.map((group: any) => (
+                    <div key={group.vendorId} className="mb-3">
+                      <div className="flex items-center gap-2 px-1 py-1 text-xs font-medium text-gray-600">
+                        <StoreIcon size={14} className="text-primary" />
+                        <span>{group.vendorName}</span>
+                        <span className="text-gray-400 ml-auto">
+                          {group.items.reduce(
+                            (sum: any, i: any) => sum + i.quantity,
+                            0,
+                          )}{" "}
+                          items
+                        </span>
+                      </div>
+                      <AnimatePresence mode="popLayout">
+                        {group.items.map((item: any) => (
+                          <CartItem key={item.variantId} item={item} />
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
 
             {/* Summary / CTA */}
-            {itemCount > 0 && (
+            {itemCount > 0 && displayItems.length > 0 && (
               <div className="px-5 pb-6 pt-3">
                 {user ? (
-                  <CartSummary subtotal={subtotal} savings={savings} />
+                  <CartSummary
+                    items={displayItems}
+                    subtotal={subtotal}
+                    savings={savings}
+                    baseRate={baseRate}
+                  />
                 ) : (
-                  <GuestCartCTA subtotal={subtotal} />
+                  <GuestCartCTA
+                    items={displayItems}
+                    subtotal={subtotal}
+                    baseRate={baseRate}
+                  />
                 )}
               </div>
             )}
@@ -187,12 +238,20 @@ export function CartDrawer() {
   );
 }
 
-function GuestCartCTA({ subtotal }: { subtotal: number }) {
+function GuestCartCTA({
+  items,
+  subtotal,
+  baseRate,
+}: {
+  items: DisplayCartItem[];
+  subtotal: number;
+  baseRate: number;
+}) {
   const dispatch = useDispatch();
   const router = useRouter();
   const { itemCount } = useCart();
-  const shippingFee = subtotal >= 1000 ? 0 : 60;
-  const total = subtotal + shippingFee;
+  const { totalShipping } = computeVendorShipping(items, baseRate, 4000);
+  const total = subtotal + totalShipping;
 
   return (
     <div className="border-t border-gray-100 pt-4 space-y-3">
@@ -203,10 +262,10 @@ function GuestCartCTA({ subtotal }: { subtotal: number }) {
         </div>
         <div className="flex justify-between text-gray-600">
           <span>Shipping</span>
-          {subtotal >= 1000 ? (
+          {totalShipping === 0 ? (
             <span className="text-green-600 font-medium">FREE</span>
           ) : (
-            <span>{formatBDT(shippingFee)}</span>
+            <span>{formatBDT(totalShipping)}</span>
           )}
         </div>
         <div className="flex justify-between font-bold text-gray-900 text-base pt-2 border-t border-gray-100">

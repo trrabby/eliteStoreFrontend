@@ -48,7 +48,7 @@ export const getProductByIdPublic = async (id: number) => {
 // get product by id — vendor/admin
 export const getProductById = async (id: number) => {
   try {
-    return await fetchWithAuth(`/products/${id}`);
+    return await fetchPublic(`/products/${id}`);
   } catch (error: any) {
     return Error(error);
   }

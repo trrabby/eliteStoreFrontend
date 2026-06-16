@@ -1,6 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-"use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useSelector } from "react-redux";
@@ -19,71 +18,64 @@ export type DisplayCartItem = {
   price: number;
   comparePrice: number | null;
   stock: number;
+  vendorId: number;
+  vendorName: string;
 };
 
 export function useCartDisplay() {
   const items = useSelector((s: RootState) => s.cart.items);
-  const isCartOpen = useSelector((s: RootState) => s.ui.isCartOpen);
-
-  const [productCache, setProductCache] = useState<Record<number, any>>({});
+  const [productData, setProductData] = useState<Record<number, any>>({});
   const [loading, setLoading] = useState(false);
-  const hasFetchedForCurrentItemsRef = useRef(false);
+  const fetchedIds = useRef<Set<number>>(new Set());
 
-  // Get unique product IDs
   const productIds = useMemo(
     () => [...new Set(items.map((i) => i.productId))],
     [items],
   );
 
-  // Fetch products when cart opens
   useEffect(() => {
-    if (!isCartOpen || productIds.length === 0) {
-      // Reset fetch flag when cart closes
-      if (!isCartOpen) {
-        hasFetchedForCurrentItemsRef.current = false;
-      }
+    if (productIds.length === 0) {
+      setProductData({});
+      fetchedIds.current.clear();
       return;
     }
 
-    // Check if we need to fetch (cart just opened or items changed)
-    const needsFetch = !hasFetchedForCurrentItemsRef.current;
+    const toFetch = productIds.filter((id) => !fetchedIds.current.has(id));
+    if (toFetch.length === 0) return;
 
-    if (needsFetch) {
-      const missingProducts = productIds.filter((id) => !productCache[id]);
+    setLoading(true);
 
-      if (missingProducts.length > 0) {
-        setLoading(true);
+    Promise.all(toFetch.map((id) => getProductById(id)))
+      .then((results) => {
+        const updates: Record<number, any> = {};
+        toFetch.forEach((id, index) => {
+          const res = results[index];
+          fetchedIds.current.add(id);
+          if (res?.success && res.data) {
+            updates[id] = res.data;
+          } else {
+            updates[id] = {
+              name: "Unavailable",
+              slug: "#",
+              images: [],
+              variants: [],
+              vendorId: 0, // fallback
+            };
+          }
+        });
+        setProductData((prev) => ({ ...prev, ...updates }));
+      })
+      .catch(() => {
+        toFetch.forEach((id) => fetchedIds.current.add(id));
+      })
+      .finally(() => setLoading(false));
+  }, [productIds]);
 
-        Promise.allSettled(missingProducts.map((id) => getProductById(id)))
-          .then((results) => {
-            const updates: Record<number, any> = {};
-            missingProducts.forEach((id, idx) => {
-              const result = results[idx];
-              if (result.status === "fulfilled" && result.value?.success) {
-                updates[id] = result.value.data;
-              }
-            });
-            setProductCache((prev) => ({ ...prev, ...updates }));
-            hasFetchedForCurrentItemsRef.current = true;
-          })
-          .catch((error) => {
-            console.error("Failed to fetch cart items:", error);
-          })
-          .finally(() => {
-            setLoading(false);
-          });
-      } else {
-        hasFetchedForCurrentItemsRef.current = true;
-      }
-    }
-  }, [isCartOpen, productIds, productCache]);
-
-  // Build display items
   const displayItems: DisplayCartItem[] = useMemo(() => {
     const result: DisplayCartItem[] = [];
 
     for (const item of items) {
-      const product = productCache[item.productId];
+      const product = productData[item.productId];
       if (!product) continue;
 
       const variant = product.variants?.find(
@@ -105,11 +97,13 @@ export function useCartDisplay() {
           ? Number(variant.comparePrice)
           : null,
         stock: variant.stock,
+        vendorId: product.vendorId ?? 0,
+        vendorName: product.vendor?.storeName ?? "Unknown Vendor",
       });
     }
 
     return result;
-  }, [items, productCache]);
+  }, [items, productData]);
 
   const subtotal = useMemo(
     () =>

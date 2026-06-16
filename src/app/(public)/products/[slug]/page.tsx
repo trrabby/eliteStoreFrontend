@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const image = product.images?.[0]?.url;
 
   return {
-    title: `${product.name} | Elite Store`,
+    title: `${product.name}`,
     description:
       product.shortDescription ??
       `Buy ${product.name} at the best price in Bangladesh. Free delivery on orders over ৳1000.`,

@@ -2,27 +2,39 @@
 
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { ShoppingBag, Tag } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { formatBDT } from "@/lib/utils/currency";
 import { toggleCart } from "@/store/slices/uiSlice";
 import { useCart } from "@/lib/hooks/useCart";
+import { DisplayCartItem } from "@/lib/hooks/useCartDisplay";
+import { computeVendorShipping } from "@/lib/utils/cart";
 
 type Props = {
+  items: DisplayCartItem[];
   subtotal: number;
   savings: number;
+  baseRate: number;
+  threshold?: number;
 };
 
-const FREE_SHIPPING_THRESHOLD = 1000;
-
-export function CartSummary({ subtotal, savings }: Props) {
+export function CartSummary({
+  items,
+  subtotal,
+  savings,
+  baseRate,
+  threshold = 4000,
+}: Props) {
   const { itemCount } = useCart();
   const dispatch = useDispatch();
   const router = useRouter();
 
-  const freeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
-  const shippingFee = freeShipping ? 0 : 60;
-  const total = subtotal + shippingFee;
+  const { totalShipping, vendorCount } = computeVendorShipping(
+    items,
+    baseRate,
+    threshold,
+  );
+  const total = subtotal + totalShipping;
 
   const handleCheckout = () => {
     dispatch(toggleCart());
@@ -31,62 +43,30 @@ export function CartSummary({ subtotal, savings }: Props) {
 
   return (
     <div className="border-t border-gray-100 pt-4 space-y-3">
-      {/* Free shipping progress */}
-      {!freeShipping && (
-        <div className="bg-primary-pale rounded-xl p-3">
-          <p className="text-xs text-gray-600 mb-1.5">
-            Add{" "}
-            <span className="font-bold text-primary">
-              {formatBDT(FREE_SHIPPING_THRESHOLD - subtotal)}
-            </span>{" "}
-            more for free shipping!
-          </p>
-          <div className="h-1.5 bg-white rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-gradient-primary rounded-full"
-              initial={{ width: 0 }}
-              animate={{
-                width: `${Math.min(
-                  (subtotal / FREE_SHIPPING_THRESHOLD) * 100,
-                  100,
-                )}%`,
-              }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-            />
-          </div>
+      {vendorCount > 1 && (
+        <div className="bg-blue-50 text-blue-700 rounded-xl p-2.5 text-xs">
+          Items from {vendorCount} vendors – shipping charges applied per
+          vendor.
         </div>
       )}
 
-      {freeShipping && (
-        <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 rounded-xl p-3">
-          🎉 <span className="font-medium">Free shipping unlocked!</span>
-        </div>
-      )}
-
-      {savings > 0 && (
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1 text-green-600">
-            <Tag size={12} />
-            <span>You save</span>
-          </div>
-          <span className="font-semibold text-green-600">
-            {formatBDT(savings)}
-          </span>
-        </div>
-      )}
-
-      {/* Breakdown */}
       <div className="space-y-1.5 text-sm">
         <div className="flex justify-between text-gray-600">
           <span>Subtotal ({itemCount} items)</span>
           <span>{formatBDT(subtotal)}</span>
         </div>
+        {savings > 0 && (
+          <div className="flex justify-between text-green-600">
+            <span>You save</span>
+            <span>-{formatBDT(savings)}</span>
+          </div>
+        )}
         <div className="flex justify-between text-gray-600">
           <span>Shipping</span>
-          {freeShipping ? (
+          {totalShipping === 0 ? (
             <span className="text-green-600 font-medium">FREE</span>
           ) : (
-            <span>{formatBDT(shippingFee)}</span>
+            <span>{formatBDT(totalShipping)}</span>
           )}
         </div>
         <div className="flex justify-between font-bold text-gray-900 text-base pt-2 border-t border-gray-100">
