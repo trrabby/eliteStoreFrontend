@@ -2,7 +2,6 @@
 "use server";
 import { config } from "@/config";
 import { cookies } from "next/headers";
-import { serverLogout } from "./auth.service";
 
 // ─────────────────────────────────────────
 // Core fetch wrapper with auto token refresh

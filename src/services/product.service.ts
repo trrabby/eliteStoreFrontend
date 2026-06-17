@@ -37,18 +37,18 @@ export const getProductBySlug = async (slug: string) => {
 };
 
 // Public product fetch by id — no auth required
-export const getProductByIdPublic = async (id: number) => {
+export const getProductByIdPublic = async (publicId: string) => {
   try {
-    return await fetchPublic(`/products/id/${id}`, {}, 60);
+    return await fetchPublic(`/products/publicId/${publicId}`, {}, 60);
   } catch (error: any) {
     return Error(error);
   }
 };
 
-// get product by id — vendor/admin
+// get product by id — public
 export const getProductById = async (id: number) => {
   try {
-    return await fetchPublic(`/products/${id}`);
+    return await fetchPublic(`/products/productId/${id}`);
   } catch (error: any) {
     return Error(error);
   }

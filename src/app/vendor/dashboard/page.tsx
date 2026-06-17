@@ -354,6 +354,8 @@ export default function VendorDashboardPage() {
                     src={p.images[0].url}
                     alt={p.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    height={400}
+                    width={400}
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-pale" />

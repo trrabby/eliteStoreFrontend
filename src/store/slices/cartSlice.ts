@@ -56,18 +56,37 @@ export const cartSlice = createSlice({
       state.itemCount = countItems(state.items);
     },
 
-    /* Replace with DB state — called after login sync or manual refresh */
+    /* sync itmes with db and local storage */
     setItemsFromDB: (
       state,
       action: PayloadAction<
         { variantId: number; productId: number; quantity: number }[]
       >,
     ) => {
-      state.items = action.payload.map((i) => ({
-        variantId: i.variantId,
-        productId: i.productId,
-        quantity: i.quantity,
-      }));
+      // Merge incoming items with existing items
+      const incoming = action.payload;
+      // Create a map of existing items by variantId
+      const existingMap = new Map<number, CartMinimalItem>();
+      for (const item of state.items) {
+        existingMap.set(item.variantId, item);
+      }
+      for (const item of incoming) {
+        const existing = existingMap.get(item.variantId);
+        if (existing) {
+          // Sum quantities
+          existing.quantity += item.quantity;
+        } else {
+          // Add new item
+          const newItem: CartMinimalItem = {
+            variantId: item.variantId,
+            productId: item.productId,
+            quantity: item.quantity,
+          };
+          existingMap.set(item.variantId, newItem);
+        }
+      }
+      // Convert map back to array
+      state.items = Array.from(existingMap.values());
       state.itemCount = countItems(state.items);
       state.isSyncing = false;
     },

@@ -25,13 +25,11 @@ export const loginUser = async (userData: FieldValues) => {
       cookieStore.set("accessToken", result.data.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        path: "/",
       });
 
       cookieStore.set("refreshToken", result.data.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        path: "/",
       });
     }
 
@@ -68,15 +66,15 @@ export const loginViaProvider = async (
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "none",
-        path: "/",
-        maxAge: 60 * 60 * 24,
+        // path: "/",
+        // maxAge: 60 * 60 * 24,
       });
       cookieStore.set("refreshToken", result.data.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "none",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        // path: "/",
+        // maxAge: 60 * 60 * 24 * 30,
       });
     }
 

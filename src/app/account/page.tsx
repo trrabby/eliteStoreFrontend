@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -20,7 +21,11 @@ import {
 import { toast } from "sonner";
 
 import { useAppDispatch, useAppSelector } from "@/store/hook";
-import { selectCurrentUser, setUser } from "@/store/slices/authSlice";
+import {
+  selectCurrentUser,
+  setLogout,
+  setUser,
+} from "@/store/slices/authSlice";
 
 import { getMyProfile, updateMyProfile } from "@/services/user.service";
 
@@ -31,6 +36,8 @@ import { formatDate } from "@/lib/utils/date";
 
 import { FormInput } from "@/components/shared/FormInput";
 import Image from "next/image";
+import { useLogout } from "@/lib/hooks/useLogout";
+import { useRouter } from "next/navigation";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "Required"),
@@ -58,8 +65,9 @@ type PasswordData = z.infer<typeof passwordSchema>;
 
 export default function ProfilePage() {
   const dispatch = useAppDispatch();
-
   const user = useAppSelector(selectCurrentUser);
+  const logout = useLogout();
+  const router = useRouter();
 
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -86,6 +94,21 @@ export default function ProfilePage() {
   const passwordForm = useForm<PasswordData>({
     resolver: zodResolver(passwordSchema),
   });
+
+  const load = async () => {
+    const profile = await getMyProfile();
+    // console.log(profile);
+    if (!profile?.success && profile?.message === "Please log in again") {
+      await logout;
+      dispatch(setLogout());
+      router.push("/login");
+      return;
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
 
   useEffect(() => {
     profileForm.reset({
