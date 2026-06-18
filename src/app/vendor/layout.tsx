@@ -14,9 +14,9 @@ import {
   ChevronRight,
   LogOut,
   Menu,
+  Wallet,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { toast } from "sonner";
 import { Logo } from "@/components/shared/Logo";
 import { NotificationToast } from "@/components/shared/NotificationToast";
 import { SocketProvider } from "@/components/providers/SocketProvider";
@@ -29,6 +29,7 @@ const VENDOR_NAV = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/vendor/dashboard" },
   { icon: Package, label: "Products", href: "/vendor/products" },
   { icon: ShoppingCart, label: "Orders", href: "/vendor/orders" },
+  { icon: Wallet, label: "Withdrawals", href: "/vendor/withdrawals" },
   { icon: Archive, label: "Inventory", href: "/vendor/inventory" },
   { icon: Star, label: "Reviews", href: "/vendor/reviews" },
   { icon: Store, label: "My Store", href: "/vendor/store" },

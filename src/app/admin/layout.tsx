@@ -41,6 +41,7 @@ const ADMIN_NAV = [
   { icon: Award, label: "Brands", href: "/admin/brands" },
   { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
   { icon: Truck, label: "Shipments", href: "/admin/shipments" },
+  { icon: Wallet, label: "Withdrawals", href: "/admin/withdrawals" },
   { icon: CreditCard, label: "Payments", href: "/admin/payments" },
   { icon: RotateCcw, label: "Returns", href: "/admin/returns" },
   { icon: Star, label: "Reviews", href: "/admin/reviews" },
