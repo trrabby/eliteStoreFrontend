@@ -272,7 +272,7 @@ function RequestDetailsModal({
               Withdraw Request
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">
-              Trace Id: {request?.id}
+              Trace Id: {request?.publicId}
             </p>
           </div>
           <button

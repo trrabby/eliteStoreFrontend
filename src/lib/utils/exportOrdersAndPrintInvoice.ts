@@ -3,7 +3,6 @@
 
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
-import html2pdf from "html2pdf.js";
 import { formatBDT } from "./currency";
 import { formatDate, formatDateTime } from "./date";
 
