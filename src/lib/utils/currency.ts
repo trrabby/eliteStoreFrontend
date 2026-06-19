@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export const formatBDT = (
   amount: number | string,
   showSymbol: boolean = true,
@@ -27,3 +28,48 @@ export const discountPercent = (
   if (!comparePrice || comparePrice <= price) return 0;
   return Math.round(((comparePrice - price) / comparePrice) * 100);
 };
+
+// lib/utils/product.ts
+export function computeVariantPrice(
+  variantPrice: number,
+  flashOffer: any | null,
+): {
+  salePrice: number;
+  originalPrice: number;
+  discountPercent: number;
+  discountAmount: number;
+  hasDiscount: boolean;
+} {
+  const originalPrice = variantPrice;
+  let salePrice = originalPrice;
+  let discountPercent = 0;
+
+  if (flashOffer) {
+    const discountType = flashOffer.discountType;
+    const discountValue = Number(flashOffer.discountValue);
+    const maxDiscount = flashOffer.maxDiscount
+      ? Number(flashOffer.maxDiscount)
+      : null;
+
+    if (discountType === "PERCENTAGE") {
+      let amount = (originalPrice * discountValue) / 100;
+      if (maxDiscount && amount > maxDiscount) amount = maxDiscount;
+      salePrice = originalPrice - amount;
+    } else if (discountType === "FLAT") {
+      salePrice = originalPrice - discountValue;
+    }
+    salePrice = Math.max(0, salePrice);
+    discountPercent =
+      originalPrice > 0
+        ? Math.round(((originalPrice - salePrice) / originalPrice) * 100)
+        : 0;
+  }
+
+  return {
+    salePrice,
+    originalPrice,
+    discountPercent,
+    discountAmount: originalPrice - salePrice,
+    hasDiscount: originalPrice > salePrice,
+  };
+}

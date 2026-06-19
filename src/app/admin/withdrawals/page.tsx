@@ -30,7 +30,7 @@ import {
   getSingleWithdrawRequest,
 } from "@/services/vendorWithdraw.service";
 import { formatBDT } from "@/lib/utils/currency";
-import { formatDate } from "@/lib/utils/date";
+import { formatDate, formatDateTime } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -116,7 +116,14 @@ const showProcessDialog = async (): Promise<DialogResult> => {
 };
 
 const showPayDialog = async (): Promise<DialogResult> => {
-  const today = new Date().toISOString().split("T")[0];
+  // Format current local time to YYYY-MM-DDTHH:mm for datetime-local value format
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  const currentDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
 
   const { value, isConfirmed } = await Swal.fire({
     title: "Mark as Paid",
@@ -150,13 +157,13 @@ const showPayDialog = async (): Promise<DialogResult> => {
 
         <div>
           <label for="paid-on" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
-            Paid On
+            Paid On (Date & Time)
           </label>
           <input
             id="paid-on"
-            type="date"
+            type="datetime-local"
             class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 transition duration-200 focus:bg-white focus:border-[#ff3e9b] focus:ring-2 focus:ring-[#ff3e9b]/20 focus:outline-none"
-            value="${today}"
+            value="${currentDateTime}"
           />
         </div>
       </div>
@@ -172,7 +179,7 @@ const showPayDialog = async (): Promise<DialogResult> => {
     customClass: {
       popup: "rounded-3xl border border-gray-100 shadow-2xl p-6 max-w-sm",
       title: "text-xl font-bold text-gray-900 pt-2",
-      htmlContainer: "m-0 p-0", // Resets swal's huge built-in margins
+      htmlContainer: "m-0 p-0",
       actions: "mt-6 flex gap-3 w-full justify-end",
       confirmButton:
         "inline-flex justify-center items-center px-5 py-2.5 bg-[#ff3e9b] text-white text-sm font-semibold rounded-xl hover:bg-[#d4006f] active:scale-[0.98] transition-all duration-200 shadow-sm shadow-[#ff3e9b]/20",
@@ -194,6 +201,8 @@ const showPayDialog = async (): Promise<DialogResult> => {
 
       const paidThrough =
         method.value + (details?.value ? `, ${details.value}` : "");
+
+      // returns the string in 'YYYY-MM-DDTHH:mm' structure
       return { paidThrough, paidOn: paidOn.value };
     },
   });
@@ -411,7 +420,7 @@ function RequestDetailsModal({
             {/* Details grid */}
             <dl className="divide-y divide-gray-100 text-sm">
               <div className="flex justify-between py-2">
-                <dt className="text-gray-500">Payment Method</dt>
+                <dt className="text-gray-500">Requested Payment Method</dt>
                 <dd className="font-medium text-gray-900">
                   {request?.paymentMethod}
                 </dd>
@@ -419,18 +428,9 @@ function RequestDetailsModal({
 
               {request?.description && (
                 <div className="flex justify-between py-2">
-                  <dt className="text-gray-500">Note</dt>
+                  <dt className="text-gray-500">Requested Channel</dt>
                   <dd className="font-medium text-gray-900 max-w-50 text-right wrap-break-word">
                     {request.description}
-                  </dd>
-                </div>
-              )}
-
-              {request?.processingDetails && (
-                <div className="flex justify-between py-2">
-                  <dt className="text-gray-500">Processing Details</dt>
-                  <dd className="font-medium text-gray-900 max-w-50 text-right wrap-break-word">
-                    {request?.processingDetails}
                   </dd>
                 </div>
               )}
@@ -445,9 +445,9 @@ function RequestDetailsModal({
               )}
 
               <div className="flex justify-between py-2">
-                <dt className="text-gray-500">Requested</dt>
+                <dt className="text-gray-500">Requested On</dt>
                 <dd className="font-medium text-gray-900">
-                  {formatDate(request?.createdAt)}
+                  {formatDateTime(request?.createdAt)}
                 </dd>
               </div>
 
@@ -455,16 +455,16 @@ function RequestDetailsModal({
                 <div className="flex justify-between py-2">
                   <dt className="text-gray-500">Processing Details</dt>
                   <dd className="font-medium text-gray-900">
-                    {formatDate(request?.processingDetails)}
+                    {request?.processingDetails}
                   </dd>
                 </div>
               )}
 
-              {request?.paidAt && (
+              {request?.paidOn && (
                 <div className="flex justify-between py-2">
-                  <dt className="text-gray-500">Paid At</dt>
+                  <dt className="text-gray-500">Paid On</dt>
                   <dd className="font-medium text-gray-900">
-                    {formatDate(request?.paidAt)}
+                    {formatDateTime(request?.paidOn)}
                   </dd>
                 </div>
               )}
@@ -482,7 +482,7 @@ function RequestDetailsModal({
                 <div className="flex justify-between py-2">
                   <dt className="text-gray-500">Paid Through</dt>
                   <dd className="font-medium text-gray-900">
-                    {request.paidThrough} on {formatDate(request?.paidOn)}
+                    {request.paidThrough}
                   </dd>
                 </div>
               )}
@@ -721,9 +721,9 @@ export default function AdminWithdrawalsPage() {
     }
     try {
       await exportWithdrawalsToExcel(dataToExport, dateFrom, dateTo);
-      toast.success("Export started");
-    } catch (error) {
-      toast.error("Export failed");
+      toast.success("Export Completed");
+    } catch (error: any) {
+      toast.error(error.message || "Export failed");
     }
   };
 
@@ -792,8 +792,8 @@ export default function AdminWithdrawalsPage() {
         </div>
 
         {/* Right side */}
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:flex-none sm:w-48">
+        <div className="flex flex-wrap items-center gap-2 w-1/2">
+          <div className="relative flex-1">
             <Search
               size={15}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -804,7 +804,7 @@ export default function AdminWithdrawalsPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder="Search..."
+              placeholder="Search by Trace Id, Vendor Name, Method, Channel.."
               className="w-full pl-9 pr-8 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-gray-50/50 transition-all"
             />
             {search && (
@@ -836,7 +836,7 @@ export default function AdminWithdrawalsPage() {
 
           <button
             onClick={handleExport}
-            className="p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50"
+            className="p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-green-900 hover:text-white duration-300 cursor-pointer"
             title="Export to Excel"
           >
             <Download size={16} />

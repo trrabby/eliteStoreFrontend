@@ -319,46 +319,48 @@ function RequestDetailsModal({
             {/* Details grid */}
             <dl className="divide-y divide-gray-100 text-sm">
               <div className="flex justify-between py-2">
-                <dt className="text-gray-500">Payment Method</dt>
+                <dt className="text-gray-500">Requested Method</dt>
                 <dd className="font-medium text-gray-900">
                   {request.paymentMethod}
                 </dd>
               </div>
               {request.description && (
                 <div className="flex justify-between py-2">
-                  <dt className="text-gray-500">Note</dt>
+                  <dt className="text-gray-500">Requested Channel</dt>
                   <dd className="font-medium text-gray-900 max-w-50 text-right">
                     {request.description}
                   </dd>
                 </div>
               )}
               <div className="flex justify-between py-2">
-                <dt className="text-gray-500">Requested</dt>
+                <dt className="text-gray-500">Requested on</dt>
                 <dd className="font-medium text-gray-900">
                   {formatDate(request.createdAt)}
                 </dd>
               </div>
-              {request.paidAt && (
+              {request.paidOn && (
                 <div className="flex justify-between py-2">
-                  <dt className="text-gray-500">Paid At</dt>
+                  <dt className="text-gray-500">Paid on</dt>
                   <dd className="font-medium text-gray-900">
-                    {formatDate(request.paidAt)}
+                    {formatDate(request.paidOn)}
                   </dd>
                 </div>
               )}
-              {request.cancelledAt && (
-                <div className="flex justify-between py-2">
-                  <dt className="text-gray-500">Cancelled At</dt>
-                  <dd className="font-medium text-gray-900">
-                    {formatDate(request.cancelledAt)}
-                  </dd>
-                </div>
-              )}
+
               {request.paidThrough && (
                 <div className="flex justify-between py-2">
                   <dt className="text-gray-500">Paid Through</dt>
                   <dd className="font-medium text-gray-900">
                     {request.paidThrough}
+                  </dd>
+                </div>
+              )}
+
+              {request.cancelReason && (
+                <div className="flex justify-between py-2">
+                  <dt className="text-gray-500">Cancel Reason</dt>
+                  <dd className="font-medium text-gray-900">
+                    {request.cancelReason}
                   </dd>
                 </div>
               )}

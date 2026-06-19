@@ -1,256 +1,408 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { ShoppingCart, Heart, Zap } from "lucide-react";
-import { VariantSelector } from "./VariantSelector";
-import { QuantitySelector } from "./QuantitySelector";
-import { MagneticButton } from "@/components/shared/MagneticButton";
-import { useFlyToCart } from "@/components/shared/FlyToCart";
+import { useState, useMemo, useEffect } from "react";
 import { useCart } from "@/lib/hooks/useCart";
-import { useDispatch, useSelector } from "react-redux";
-import {
-  selectWishitems,
-  toggleWishlistItem,
-} from "@/store/slices/wishlistSlice";
-import { toggleWishlist } from "@/services/wishlist.service";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { formatBDT } from "@/lib/utils/currency";
+import { computeVariantPrice, formatBDT } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils/cn";
-import { useAppSelector } from "@/store/hook";
-import { selectCurrentUser } from "@/store/slices/authSlice";
+import { toast } from "sonner";
+import { Minus, Plus, ShoppingBag, Star, Clock, Tag, Zap } from "lucide-react";
 
-type AddToCartSectionProps = {
-  product: any;
-  defaultVariant: any;
-  flashOffer: any | null;
-};
+interface Variant {
+  id: number;
+  name: string;
+  price: string;
+  comparePrice?: string | null;
+  stock: number;
+  isDefault: boolean;
+  optionValues: Array<{
+    value: {
+      id: number;
+      option: {
+        id: any;
+        name: string;
+      };
+      value: string;
+    };
+  }>;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  variants: Variant[];
+}
+
+interface FlashOffer {
+  id: number;
+  discountType: "PERCENTAGE" | "FLAT";
+  discountValue: string;
+  maxDiscount?: string | null;
+  salePrice: string;
+  originalPrice: string;
+  stock: number;
+  soldCount: number;
+  flashSale: {
+    title: string;
+    endsAt: string;
+    status: string;
+  };
+}
+
+interface AddToCartSectionProps {
+  product: Product;
+  defaultVariant: Variant;
+  flashOffer: FlashOffer | null;
+  onVariantChange?: (variant: Variant) => void;
+}
 
 export function AddToCartSection({
   product,
   defaultVariant,
   flashOffer,
+  onVariantChange,
 }: AddToCartSectionProps) {
-  const router = useRouter();
-  const user = useAppSelector(selectCurrentUser);
-  const dispatch = useDispatch();
   const { addToCart } = useCart();
-  const { flyToCart } = useFlyToCart();
-
-  const wishlistIds = useSelector(selectWishitems);
-  const isWishlisted = wishlistIds.includes(product.id);
-
-  const [selectedVariant, setSelectedVariant] = useState(defaultVariant);
   const [quantity, setQuantity] = useState(1);
-  const [addingCart, setAddingCart] = useState(false);
-  const [buyingNow, setBuyingNow] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [timeLeft, setTimeLeft] = useState("");
+  console.log(flashOffer);
+  // Ticking countdown effect for the Flash Sale
+  useEffect(() => {
+    if (!flashOffer?.flashSale?.endsAt) return;
 
-  const price = flashOffer
-    ? Number(flashOffer.salePrice)
-    : Number(selectedVariant?.price ?? 0);
+    const calculateTimeLeft = () => {
+      const difference = +new Date(flashOffer.flashSale.endsAt) - +new Date();
+      if (difference <= 0) return "Ended";
 
-  const stock = selectedVariant?.stock ?? 0;
-  const outOfStock = stock === 0;
-  const maxQty = Math.min(stock, 10);
+      const hours = Math.floor(difference / (1000 * 60 * 60));
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
 
-  // Sticky mobile bar ref for cart icon
-  const { registerCartRef } = useFlyToCart();
+      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+        2,
+        "0",
+      )}:${String(seconds).padStart(2, "0")}`;
+    };
+
+    setTimeLeft(calculateTimeLeft());
+    const timer = setInterval(() => setTimeLeft(calculateTimeLeft()), 1000);
+
+    return () => clearInterval(timer);
+  }, [flashOffer]);
+
+  // Build options structure
+  const options = useMemo(() => {
+    const optionMap: Record<
+      string,
+      {
+        optionId: number;
+        values: Record<number, { value: string; variantIds: number[] }>;
+      }
+    > = {};
+
+    product.variants.forEach((variant) => {
+      variant.optionValues.forEach((ov) => {
+        const optionName = ov.value.option.name;
+        const optionId = ov.value.option.id;
+        const valueId = ov.value.id;
+        const value = ov.value.value;
+
+        if (!optionMap[optionName]) {
+          optionMap[optionName] = { optionId, values: {} };
+        }
+        if (!optionMap[optionName].values[valueId]) {
+          optionMap[optionName].values[valueId] = { value, variantIds: [] };
+        }
+        optionMap[optionName].values[valueId].variantIds.push(variant.id);
+      });
+    });
+
+    return optionMap;
+  }, [product.variants]);
+
+  // State for selected options
+  const [selectedOptions, setSelectedOptions] = useState<
+    Record<string, number>
+  >(() => {
+    const initial: Record<string, number> = {};
+    defaultVariant.optionValues.forEach((ov) => {
+      const optionName = ov.value.option.name;
+      initial[optionName] = ov.value.id;
+    });
+    return initial;
+  });
+
+  // Find selected variant
+  const selectedVariant = useMemo(() => {
+    const matchingVariants = product.variants.filter((variant) => {
+      return Object.entries(selectedOptions).every(([optionName, valueId]) => {
+        return variant.optionValues.some(
+          (ov) =>
+            ov.value.option.name === optionName && ov.value.id === valueId,
+        );
+      });
+    });
+    return matchingVariants[0] || defaultVariant;
+  }, [selectedOptions, product.variants, defaultVariant]);
+
+  // Notify parent when variant changes
+  useEffect(() => {
+    if (onVariantChange) {
+      onVariantChange(selectedVariant);
+    }
+  }, [selectedVariant, onVariantChange]);
+
+  // ---- Discount Logic ----
+  const variantPrice = Number(selectedVariant.price);
+  const isFlashActive = flashOffer?.flashSale?.endsAt
+    ? new Date() < new Date(flashOffer.flashSale.endsAt)
+    : false;
+
+  let displayPrice = variantPrice;
+  let displayOriginal = variantPrice;
+  let discountPercent = 0;
+  let hasDiscount = false;
+
+  if (isFlashActive && flashOffer) {
+    const result = computeVariantPrice(variantPrice, flashOffer);
+    displayPrice = result.salePrice;
+    displayOriginal = result.originalPrice;
+    discountPercent = result.discountPercent;
+    hasDiscount = result.hasDiscount;
+  } else if (selectedVariant.comparePrice) {
+    const compare = Number(selectedVariant.comparePrice);
+    if (compare > variantPrice) {
+      displayOriginal = compare;
+      displayPrice = variantPrice;
+      discountPercent = Math.round(((compare - variantPrice) / compare) * 100);
+      hasDiscount = true;
+    }
+  }
+
+  if (isFlashActive && selectedVariant.comparePrice) {
+    const compare = Number(selectedVariant.comparePrice);
+    if (compare > displayOriginal) {
+      displayOriginal = compare;
+      discountPercent = Math.round(((compare - displayPrice) / compare) * 100);
+    }
+  }
+
+  const finalHasDiscount = hasDiscount || displayOriginal > displayPrice;
+
+  // ---- Handlers ----
+  const handleOptionSelect = (optionName: string, valueId: number) => {
+    setSelectedOptions((prev) => ({ ...prev, [optionName]: valueId }));
+    setQuantity(1);
+  };
 
   const handleAddToCart = async () => {
-    if (outOfStock || addingCart || !selectedVariant) return;
-    setAddingCart(true);
-
-    const imgEl = document.querySelector(
-      "[data-product-main-image]",
-    ) as HTMLElement;
-    if (imgEl) flyToCart(product.images?.[0]?.url ?? "", imgEl);
-
-    const res = await addToCart(selectedVariant.id, product.id, quantity);
-
-    if (res?.success) {
-      toast.success(`${quantity} item(s) added to cart! 🛍️`);
-    } else if (res && !res?.success) {
-      toast.error((res as { message?: string }).message ?? "Failed");
-    }
-
-    setTimeout(() => setAddingCart(false), 600);
-  };
-
-  const handleBuyNow = async () => {
-    setBuyingNow(true);
-    await handleAddToCart();
-    router.push("/checkout");
-    setBuyingNow(false);
-  };
-
-  const handleWishlist = async () => {
-    if (!user) {
-      router.push("/login");
+    if (selectedVariant.stock < 1) {
+      toast.error("This variant is out of stock.");
       return;
     }
-    dispatch(toggleWishlistItem(product.id));
-    const fd = new FormData();
-    fd.append("data", JSON.stringify({ productId: product.id }));
-    await toggleWishlist(fd);
+    if (quantity > selectedVariant.stock) {
+      toast.error(`Only ${selectedVariant.stock} left in stock.`);
+      return;
+    }
+    setAdding(true);
+    await addToCart(selectedVariant.id, product.id, quantity);
+    setAdding(false);
   };
 
+  const optionNames = Object.keys(options);
+  const flashProgressPercent = flashOffer
+    ? Math.round((flashOffer.soldCount / flashOffer.stock) * 100)
+    : 0;
+
   return (
-    <div className="space-y-5">
-      {/* Variant selector */}
-      {product.variants?.length > 0 && (
-        <VariantSelector
-          variants={product.variants}
-          selectedVariant={selectedVariant}
-          onSelect={setSelectedVariant}
-        />
-      )}
+    <div className="space-y-6">
+      {/* Dynamic Ticking Flash Sale Campaign Banner */}
+      {isFlashActive && flashOffer && (
+        <div className="bg-gradient-to-r from-rose-50 to-orange-50 border border-rose-100 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 bg-rose-500 text-white px-2.5 py-1 rounded-lg text-xs font-bold tracking-wider uppercase animate-pulse">
+                <Zap size={12} className="fill-current" /> Flash Sale
+              </span>
+              <span className="text-sm font-semibold text-slate-800">
+                {flashOffer.flashSale.title}
+              </span>
+            </div>
 
-      {/* Stock status */}
-      <div className="flex items-center gap-2">
-        <div
-          className={cn(
-            "w-2 h-2 rounded-full",
-            stock > 10
-              ? "bg-green-500"
-              : stock > 0
-              ? "bg-amber-500"
-              : "bg-red-500",
-          )}
-        />
-        <span
-          className={cn(
-            "text-sm font-medium",
-            stock > 10
-              ? "text-green-600"
-              : stock > 0
-              ? "text-amber-600"
-              : "text-red-600",
-          )}
-        >
-          {outOfStock
-            ? "Out of stock"
-            : stock <= 10
-            ? `Only ${stock} left!`
-            : "In stock"}
-        </span>
-      </div>
+            <div className="flex items-center gap-2 bg-white/80 border border-rose-100 px-3 py-1 rounded-xl text-xs font-bold text-rose-600 shadow-inner tracking-wider font-mono">
+              <Clock size={13} className="text-rose-500" />
+              <span>{timeLeft}</span>
+            </div>
+          </div>
 
-      {/* Quantity */}
-      {!outOfStock && (
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-gray-700">Quantity:</span>
-          <QuantitySelector
-            value={quantity}
-            onChange={setQuantity}
-            max={maxQty}
-          />
-          <span className="text-xs text-gray-400">Max {maxQty} per order</span>
+          {/* Campaign Deal Progress Bar Tracker */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <span>Stock Allocated</span>
+              <span>
+                {flashOffer.soldCount} / {flashOffer.stock} Sold
+              </span>
+            </div>
+            <div className="w-full bg-slate-200/60 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-rose-500 to-orange-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, flashProgressPercent)}%` }}
+              />
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Action buttons */}
-      <div className="flex gap-3">
-        <MagneticButton
-          onClick={handleAddToCart}
-          disabled={outOfStock || addingCart}
-          strength={0.3}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2",
-            "py-3.5 rounded-xl text-sm font-semibold",
-            "transition-all duration-200",
-            outOfStock
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "btn-primary",
-          )}
-        >
-          {addingCart ? (
+      {/* Price Section Container */}
+      <div className="space-y-2">
+        <div className="flex items-baseline flex-wrap gap-2.5">
+          <span className="font-display text-3xl md:text-4xl font-black text-[#ff3e9b] tracking-tight">
+            {formatBDT(displayPrice)}
+          </span>
+          {finalHasDiscount && displayOriginal > displayPrice && (
             <>
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
-                className="w-4 h-4 border-2 border-white/30
-                           border-t-white rounded-full"
-              />
-              Adding...
-            </>
-          ) : (
-            <>
-              <ShoppingCart size={16} />
-              {outOfStock ? "Out of Stock" : "Add to Cart"}
+              <span className="text-base md:text-lg text-slate-400 font-medium line-through decoration-1">
+                {formatBDT(displayOriginal)}
+              </span>
+              <span className="bg-rose-50 text-rose-600 border border-rose-100 px-2 py-0.5 rounded-lg text-xs font-extrabold tracking-wide">
+                {discountPercent}% OFF
+              </span>
             </>
           )}
-        </MagneticButton>
+        </div>
 
-        {/* Buy now */}
-        {!outOfStock && (
-          <MagneticButton
-            onClick={handleBuyNow}
-            disabled={buyingNow}
-            strength={0.3}
-            className="flex-1 flex items-center justify-center gap-2
-                       py-3.5 rounded-xl text-sm font-semibold
-                       bg-gray-900 text-white hover:bg-gray-800
-                       transition-all duration-200 disabled:opacity-60"
-          >
-            <Zap size={16} />
-            Buy Now
-          </MagneticButton>
+        {finalHasDiscount && displayOriginal > displayPrice && (
+          <p className="text-xs text-emerald-600 font-bold tracking-wide flex items-center gap-1">
+            🎉 instant savings of {formatBDT(displayOriginal - displayPrice)} on
+            this transaction!
+          </p>
         )}
 
-        {/* Wishlist */}
-        <motion.button
-          whileTap={{ scale: 0.85 }}
-          onClick={handleWishlist}
-          className={cn(
-            "w-12 h-12 rounded-xl border-2 flex items-center justify-center",
-            "transition-all duration-200",
-            isWishlisted
-              ? "border-primary bg-primary-pale text-primary"
-              : "border-gray-200 text-gray-500 hover:border-primary hover:text-primary",
+        <div className="text-xs font-semibold">
+          {selectedVariant.stock > 0 ? (
+            <span className="text-emerald-600 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-ping" />
+              In stock ({selectedVariant.stock} units available)
+            </span>
+          ) : (
+            <span className="text-rose-600">❌ Temporarily out of stock</span>
           )}
-        >
-          <Heart size={18} className={isWishlisted ? "fill-primary" : ""} />
-        </motion.button>
+        </div>
       </div>
 
-      {/* Total price display */}
-      {quantity > 1 && (
-        <motion.div
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-sm text-gray-500"
-        >
-          Total:{" "}
-          <span className="font-bold text-primary text-base">
-            {formatBDT(price * quantity)}
+      {/* Option Modifiers */}
+      {optionNames.length > 0 ? (
+        <div className="space-y-4">
+          {optionNames.map((optionName) => {
+            const option = options[optionName];
+            const selectedValueId = selectedOptions[optionName];
+
+            return (
+              <div key={optionName} className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Select {optionName}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(option.values).map(
+                    ([valueIdStr, { value, variantIds }]) => {
+                      const valueId = Number(valueIdStr);
+                      const isSelected = selectedValueId === valueId;
+                      const variantsWithValue = product.variants.filter((v) =>
+                        variantIds.includes(v.id),
+                      );
+                      const hasStock = variantsWithValue.some(
+                        (v) => v.stock > 0,
+                      );
+
+                      return (
+                        <button
+                          key={valueId}
+                          onClick={() =>
+                            handleOptionSelect(optionName, valueId)
+                          }
+                          disabled={!hasStock}
+                          className={cn(
+                            "px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all duration-200 active:scale-95",
+                            isSelected
+                              ? "border-[#ff3e9b] bg-[#ff3e9b]/5 text-[#ff3e9b] shadow-sm"
+                              : "border-slate-100 bg-slate-50/50 hover:bg-slate-50 text-slate-700 hover:border-slate-200",
+                            !hasStock &&
+                              "opacity-40 cursor-not-allowed line-through bg-slate-100 border-transparent text-slate-400 hover:border-transparent",
+                          )}
+                        >
+                          {value}
+                          {!hasStock && " (Sold Out)"}
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+          Configured:{" "}
+          <span className="text-slate-800 normal-case font-semibold">
+            {selectedVariant.name}
           </span>
-        </motion.div>
+        </div>
       )}
 
-      {/* Mobile sticky bar */}
-      <div
-        className="lg:hidden fixed bottom-16 left-0 right-0 z-30
-                      bg-white/95 backdrop-blur-md border-t border-gray-100
-                      px-4 py-3 flex items-center gap-3 shadow-lg"
-      >
-        <div className="flex-1 min-w-0">
-          <p className="font-display font-bold text-primary text-lg">
-            {formatBDT(price)}
-          </p>
-          <p className="text-xs text-gray-500 truncate">{product.name}</p>
+      {/* Action Controls Footer */}
+      <div className="flex items-center gap-3 pt-2">
+        <div className="flex items-center bg-slate-50 border border-slate-100 rounded-xl overflow-hidden p-1 shadow-sm flex-shrink-0">
+          <button
+            onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+            disabled={quantity <= 1}
+            className="p-2 text-slate-600 hover:bg-white rounded-lg disabled:opacity-40 hover:text-black transition active:scale-90"
+          >
+            <Minus size={15} strokeWidth={2.5} />
+          </button>
+          <span className="w-9 text-center font-bold text-sm tracking-tight text-slate-800 tabular-nums">
+            {quantity}
+          </span>
+          <button
+            onClick={() =>
+              setQuantity((q) => Math.min(q + 1, selectedVariant.stock))
+            }
+            disabled={quantity >= selectedVariant.stock}
+            className="p-2 text-slate-600 hover:bg-white rounded-lg disabled:opacity-40 hover:text-black transition active:scale-90"
+          >
+            <Plus size={15} strokeWidth={2.5} />
+          </button>
         </div>
+
         <button
           onClick={handleAddToCart}
-          disabled={outOfStock || addingCart}
-          ref={(el) => registerCartRef(el)}
-          className="btn-primary px-6 py-3 flex items-center gap-2
-                     text-sm disabled:opacity-60"
+          disabled={adding || selectedVariant.stock < 1}
+          className="flex-1 px-6 py-3.5 bg-[#ff3e9b] hover:bg-[#d4006f] text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-[#ff3e9b]/10 hover:shadow-lg active:scale-[0.99] transition duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
         >
-          <ShoppingCart size={15} />
-          {outOfStock ? "Sold Out" : "Add to Cart"}
+          {adding ? (
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            <>
+              <ShoppingBag size={16} strokeWidth={2.5} />
+              Add to Bag
+            </>
+          )}
         </button>
+      </div>
+
+      {/* Confidence Indicators Footer */}
+      <div className="flex items-center justify-center gap-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider pt-2 border-t border-slate-50">
+        <span className="flex items-center gap-1.5">
+          <Tag size={13} className="text-slate-400" /> Best price
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Star size={13} className="text-slate-400" /> Quality assured
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Clock size={13} className="text-slate-400" /> Fast delivery
+        </span>
       </div>
     </div>
   );

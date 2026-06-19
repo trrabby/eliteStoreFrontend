@@ -29,7 +29,7 @@ export const exportWithdrawalsToExcel = async (
 
   // Title
   const title = fileName.replace(".xlsx", "").toUpperCase();
-  sheet.mergeCells("A1:I1");
+  sheet.mergeCells("A1:L1"); // increased columns to 12
   const titleCell = sheet.getCell("A1");
   titleCell.value = title;
   titleCell.font = { size: 16, bold: true };
@@ -41,17 +41,20 @@ export const exportWithdrawalsToExcel = async (
   };
   sheet.getRow(1).height = 28;
 
-  // Headers
+  // Headers (12 columns)
   const headers = [
     "SL",
     "Request ID",
     "Vendor",
     "Amount",
-    "Payment Method",
+    "Requested Payment Method",
     "Status",
-    "Note",
+    "Requested Channel",
     "Requested At",
-    "Paid At",
+    "Paid On",
+    "Paid Through",
+    "Processing Details",
+    "Cancel Reason",
   ];
   const headerRow = sheet.addRow(headers);
   headerRow.eachCell((cell) => {
@@ -81,8 +84,11 @@ export const exportWithdrawalsToExcel = async (
       r.paymentMethod,
       r.status,
       r.description || "",
-      formatDate(r.createdAt),
-      r.paidAt ? formatDate(r.paidAt) : "",
+      formatDateTime(r.createdAt),
+      r.paidOn ? formatDateTime(r.paidOn) : "",
+      r.paidThrough || "",
+      r.processingDetails || "",
+      r.cancelReason || "",
     ]);
     row.eachCell((cell) => {
       cell.alignment = { horizontal: "center", vertical: "middle" };
