@@ -7,7 +7,17 @@ import { useCart } from "@/lib/hooks/useCart";
 import { computeVariantPrice, formatBDT } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
-import { Minus, Plus, ShoppingBag, Star, Clock, Tag, Zap } from "lucide-react";
+import {
+  Minus,
+  Plus,
+  ShoppingBag,
+  Star,
+  Clock,
+  Tag,
+  Zap,
+  ChevronRight,
+} from "lucide-react";
+import Link from "next/link";
 
 interface Variant {
   id: number;
@@ -47,6 +57,9 @@ interface FlashOffer {
     title: string;
     endsAt: string;
     status: string;
+    description: string;
+    slug: string;
+    banner: string;
   };
 }
 
@@ -67,7 +80,7 @@ export function AddToCartSection({
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
-  console.log(flashOffer);
+
   // Ticking countdown effect for the Flash Sale
   useEffect(() => {
     if (!flashOffer?.flashSale?.endsAt) return;
@@ -155,41 +168,24 @@ export function AddToCartSection({
   }, [selectedVariant, onVariantChange]);
 
   // ---- Discount Logic ----
-  const variantPrice = Number(selectedVariant.price);
-  const isFlashActive = flashOffer?.flashSale?.endsAt
-    ? new Date() < new Date(flashOffer.flashSale.endsAt)
-    : false;
+  // Run the computation
+  const pricing = useMemo(() => {
+    const variantPrice = Number(selectedVariant.price);
+    const comparePrice = selectedVariant.comparePrice
+      ? Number(selectedVariant.comparePrice)
+      : null;
 
-  let displayPrice = variantPrice;
-  let displayOriginal = variantPrice;
-  let discountPercent = 0;
-  let hasDiscount = false;
+    // Verify campaign safety lifecycle
+    const isFlashActive = flashOffer?.flashSale?.endsAt
+      ? new Date() < new Date(flashOffer.flashSale.endsAt)
+      : false;
 
-  if (isFlashActive && flashOffer) {
-    const result = computeVariantPrice(variantPrice, flashOffer);
-    displayPrice = result.salePrice;
-    displayOriginal = result.originalPrice;
-    discountPercent = result.discountPercent;
-    hasDiscount = result.hasDiscount;
-  } else if (selectedVariant.comparePrice) {
-    const compare = Number(selectedVariant.comparePrice);
-    if (compare > variantPrice) {
-      displayOriginal = compare;
-      displayPrice = variantPrice;
-      discountPercent = Math.round(((compare - variantPrice) / compare) * 100);
-      hasDiscount = true;
-    }
-  }
-
-  if (isFlashActive && selectedVariant.comparePrice) {
-    const compare = Number(selectedVariant.comparePrice);
-    if (compare > displayOriginal) {
-      displayOriginal = compare;
-      discountPercent = Math.round(((compare - displayPrice) / compare) * 100);
-    }
-  }
-
-  const finalHasDiscount = hasDiscount || displayOriginal > displayPrice;
+    return computeVariantPrice(
+      variantPrice,
+      comparePrice,
+      isFlashActive ? flashOffer : null,
+    );
+  }, [selectedVariant, flashOffer]);
 
   // ---- Handlers ----
   const handleOptionSelect = (optionName: string, valueId: number) => {
@@ -218,78 +214,120 @@ export function AddToCartSection({
 
   return (
     <div className="space-y-6">
-      {/* Dynamic Ticking Flash Sale Campaign Banner */}
-      {isFlashActive && flashOffer && (
-        <div className="bg-gradient-to-r from-rose-50 to-orange-50 border border-rose-100 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 bg-rose-500 text-white px-2.5 py-1 rounded-lg text-xs font-bold tracking-wider uppercase animate-pulse">
-                <Zap size={12} className="fill-current" /> Flash Sale
-              </span>
-              <span className="text-sm font-semibold text-slate-800">
-                {flashOffer.flashSale.title}
-              </span>
+      {/* Classy & High-End Flash Sale Offer Card */}
+
+      {flashOffer && timeLeft && timeLeft !== "Ended" && (
+        <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-[#ff3e9b] to-pink-600 rounded-2xl p-5 shadow-md transition-all hover:shadow-lg">
+          {/* Subtle grid overlay */}
+          <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] bg-[size:24px_24px]" />
+
+          <div className="relative z-10 flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  {/* Live dot + Flash Sale badge */}
+                  <span className="flex items-center gap-1.5 bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full backdrop-blur-sm">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-dark opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary-dark "></span>
+                    </span>
+                    Flash Sale
+                  </span>
+                  <h4 className="text-sm font-bold text-white drop-shadow-sm group">
+                    <Link
+                      href={`/flash-sales/${flashOffer.flashSale.slug ?? ""}`}
+                      className="inline-flex items-center gap-0.5 hover:underline underline-offset-2 decoration-white/30 transition"
+                    >
+                      <span>{flashOffer.flashSale.title}</span>
+                      <span className="opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200 text-xs">
+                        →
+                      </span>
+                    </Link>
+                  </h4>
+                </div>
+                {flashOffer.flashSale.description && (
+                  <p className="text-xs text-white/80 mt-1.5 leading-relaxed max-w-md">
+                    {flashOffer.flashSale.description}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 bg-black/20 px-3 py-1.5 rounded-full text-xs font-mono font-semibold text-white backdrop-blur-sm shrink-0">
+                <Clock size={12} />
+                <span>{timeLeft}</span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 bg-white/80 border border-rose-100 px-3 py-1 rounded-xl text-xs font-bold text-rose-600 shadow-inner tracking-wider font-mono">
-              <Clock size={13} className="text-rose-500" />
-              <span>{timeLeft}</span>
-            </div>
-          </div>
-
-          {/* Campaign Deal Progress Bar Tracker */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              <span>Stock Allocated</span>
-              <span>
-                {flashOffer.soldCount} / {flashOffer.stock} Sold
-              </span>
-            </div>
-            <div className="w-full bg-slate-200/60 h-2 rounded-full overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-rose-500 to-orange-500 h-full rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, flashProgressPercent)}%` }}
-              />
-            </div>
+            {flashOffer.stock && flashOffer.soldCount !== undefined && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-white/70 font-medium">
+                  <span>Few stock left</span>
+                  <span>
+                    {flashOffer.soldCount} / {flashOffer.stock} claimed
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-white/80 to-white rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, flashProgressPercent)}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Price Section Container */}
+      {/* Price Display Block */}
       <div className="space-y-2">
         <div className="flex items-baseline flex-wrap gap-2.5">
+          {/* Final Dynamic Price */}
           <span className="font-display text-3xl md:text-4xl font-black text-[#ff3e9b] tracking-tight">
-            {formatBDT(displayPrice)}
+            {formatBDT(pricing.salePrice)}
           </span>
-          {finalHasDiscount && displayOriginal > displayPrice && (
+
+          {/* Strike-Through Base Price */}
+          {pricing.hasDiscount && (
             <>
               <span className="text-base md:text-lg text-slate-400 font-medium line-through decoration-1">
-                {formatBDT(displayOriginal)}
+                {formatBDT(pricing.basePrice)}
               </span>
               <span className="bg-rose-50 text-rose-600 border border-rose-100 px-2 py-0.5 rounded-lg text-xs font-extrabold tracking-wide">
-                {discountPercent}% OFF
+                {pricing.totalDiscountPercent}% OFF
               </span>
             </>
           )}
         </div>
 
-        {finalHasDiscount && displayOriginal > displayPrice && (
-          <p className="text-xs text-emerald-600 font-bold tracking-wide flex items-center gap-1">
-            🎉 instant savings of {formatBDT(displayOriginal - displayPrice)} on
-            this transaction!
-          </p>
-        )}
+        {/* Granular Discount Breakdown Label */}
+        {pricing.hasDiscount && (
+          <div className="text-xs text-slate-500 font-medium space-x-1 flex flex-wrap items-center gap-1.5">
+            <span>Discount breakdown:</span>
 
-        <div className="text-xs font-semibold">
-          {selectedVariant.stock > 0 ? (
-            <span className="text-emerald-600 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-ping" />
-              In stock ({selectedVariant.stock} units available)
+            {/* Base Store discount pill flag if active */}
+            {pricing.breakdown.standardDiscountPercent > 0 && (
+              <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-semibold text-[11px]">
+                Standard: {pricing.breakdown.standardDiscountPercent}%
+              </span>
+            )}
+
+            {/* Append dynamic connection string when both active */}
+            {pricing.breakdown.standardDiscountPercent > 0 &&
+              pricing.breakdown.flashDiscountPercent > 0 && (
+                <span className="text-slate-300 font-normal">+</span>
+              )}
+
+            {/* Campaign live promotion flag if active */}
+            {pricing.breakdown.flashDiscountPercent > 0 && (
+              <span className="bg-rose-500/10 text-rose-600 px-1.5 py-0.5 rounded font-bold text-[11px]">
+                Flash Sale: {pricing.breakdown.flashDiscountPercent}%
+              </span>
+            )}
+
+            <span className="text-emerald-600 font-bold pl-1">
+              (Saved {formatBDT(pricing.totalDiscountAmount)})
             </span>
-          ) : (
-            <span className="text-rose-600">❌ Temporarily out of stock</span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Option Modifiers */}

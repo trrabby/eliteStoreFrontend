@@ -30,20 +30,36 @@ export const discountPercent = (
 };
 
 // lib/utils/product.ts
-export function computeVariantPrice(
-  variantPrice: number,
-  flashOffer: any | null,
-): {
-  salePrice: number;
-  originalPrice: number;
-  discountPercent: number;
-  discountAmount: number;
-  hasDiscount: boolean;
-} {
-  const originalPrice = variantPrice;
-  let salePrice = originalPrice;
-  let discountPercent = 0;
 
+export interface CalculatedPriceResult {
+  salePrice: number; // The final price the customer pays
+  systemPrice: number; // The store's regular price (variant.price)
+  basePrice: number; // The highest original sticker price (variant.comparePrice or fallback)
+  totalDiscountPercent: number;
+  totalDiscountAmount: number;
+  hasDiscount: boolean;
+  breakdown: {
+    standardDiscountPercent: number;
+    flashDiscountPercent: number;
+    flashDiscountAmount: number;
+  };
+}
+
+export function computeVariantPrice(
+  variantPrice: number, // this is variant.price (the store's variant sale configuration)
+  comparePrice: number | null | undefined, // this is variant.comparePrice (base sticker price)
+  flashOffer: any | null,
+): CalculatedPriceResult {
+  const systemPrice = variantPrice;
+  // If no comparePrice exists or it's lower than regular price, fall back to system price
+  const basePrice =
+    comparePrice && comparePrice > systemPrice ? comparePrice : systemPrice;
+
+  let finalSalePrice = systemPrice;
+  let flashDiscountAmount = 0;
+  let flashDiscountPercent = 0;
+
+  // 1. Calculate Flash Sale Deduction (Applied on top of systemPrice)
   if (flashOffer) {
     const discountType = flashOffer.discountType;
     const discountValue = Number(flashOffer.discountValue);
@@ -52,24 +68,45 @@ export function computeVariantPrice(
       : null;
 
     if (discountType === "PERCENTAGE") {
-      let amount = (originalPrice * discountValue) / 100;
-      if (maxDiscount && amount > maxDiscount) amount = maxDiscount;
-      salePrice = originalPrice - amount;
+      flashDiscountAmount = (systemPrice * discountValue) / 100;
+      if (maxDiscount && flashDiscountAmount > maxDiscount) {
+        flashDiscountAmount = maxDiscount;
+      }
     } else if (discountType === "FLAT") {
-      salePrice = originalPrice - discountValue;
+      flashDiscountAmount = discountValue;
     }
-    salePrice = Math.max(0, salePrice);
-    discountPercent =
-      originalPrice > 0
-        ? Math.round(((originalPrice - salePrice) / originalPrice) * 100)
+
+    flashDiscountAmount = Math.max(0, flashDiscountAmount);
+    finalSalePrice = Math.max(0, systemPrice - flashDiscountAmount);
+
+    flashDiscountPercent =
+      systemPrice > 0
+        ? Math.round((flashDiscountAmount / systemPrice) * 100)
         : 0;
   }
 
+  // 2. Calculate Standard System Store Discount Percent (Base Price vs System Price)
+  const standardDiscountPercent =
+    basePrice > 0
+      ? Math.round(((basePrice - systemPrice) / basePrice) * 100)
+      : 0;
+
+  // 3. Compute Aggregated Global Totals
+  const totalDiscountAmount = Math.max(0, basePrice - finalSalePrice);
+  const totalDiscountPercent =
+    basePrice > 0 ? Math.round((totalDiscountAmount / basePrice) * 100) : 0;
+
   return {
-    salePrice,
-    originalPrice,
-    discountPercent,
-    discountAmount: originalPrice - salePrice,
-    hasDiscount: originalPrice > salePrice,
+    salePrice: finalSalePrice,
+    systemPrice,
+    basePrice,
+    totalDiscountPercent,
+    totalDiscountAmount,
+    hasDiscount: basePrice > finalSalePrice,
+    breakdown: {
+      standardDiscountPercent,
+      flashDiscountPercent,
+      flashDiscountAmount,
+    },
   };
 }
