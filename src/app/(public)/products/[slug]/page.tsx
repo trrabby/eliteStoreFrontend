@@ -111,6 +111,7 @@ export default async function ProductDetailPage({ params }: Props) {
 
         <ReviewSection
           productId={product.id}
+          productSlug={product.slug}
           averageRating={Number(product.averageRating)}
           reviewCount={product.reviewCount}
         />

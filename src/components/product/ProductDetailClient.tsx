@@ -8,6 +8,7 @@ import { AddToCartSection } from "@/components/product/AddToCartSection";
 import { Star, ShieldCheck, RotateCcw, Truck } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import Image from "next/image";
+import Link from "next/link";
 
 interface ProductDetailClientProps {
   product: any;
@@ -129,8 +130,15 @@ export function ProductDetailClient({
         {/* Delivery info */}
         <div className="grid grid-cols-3 gap-3 pt-4 border-t border-gray-100">
           {[
-            { icon: Truck, text: "Free delivery above ৳1000" },
-            { icon: RotateCcw, text: "7-day return policy" },
+            { icon: Truck, text: "Free delivery above ৳2000" },
+            {
+              icon: RotateCcw,
+              text: `${
+                product?.vendor?.returnAcceptWithin
+                  ? `Return Accepts Within ${product?.vendor?.returnAcceptWithin} days`
+                  : "Vendor Specific Return Policy"
+              } `,
+            },
             { icon: ShieldCheck, text: "Authentic product" },
           ].map(({ icon: Icon, text }) => (
             <div
@@ -147,25 +155,67 @@ export function ProductDetailClient({
 
         {/* Vendor info */}
         {product.vendor && (
-          <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-            {product.vendor.logo && (
-              <Image
-                src={product.vendor.logo}
-                alt={product.vendor.storeName}
-                className="w-10 h-10 rounded-full object-cover"
-                height={40}
-                width={40}
-              />
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-500">Sold by</p>
-              <p className="text-sm font-semibold text-gray-900 truncate">
-                {product.vendor.storeName}
-              </p>
+          <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-white to-gray-50/80 border border-gray-100/80 shadow-sm hover:shadow-md transition-all duration-300">
+            {/* Subtle accent gradient line on the left */}
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-primary/40 rounded-l-2xl" />
+
+            <div className="flex items-center gap-4 p-4">
+              {/* Vendor Logo */}
+              <div className="flex-shrink-0">
+                {product.vendor.logo ? (
+                  <Image
+                    src={product.vendor.logo}
+                    alt={product.vendor.storeName}
+                    className="w-12 h-12 rounded-xl object-cover border border-gray-100 shadow-sm"
+                    height={48}
+                    width={48}
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg border border-primary/10">
+                    {product.vendor.storeName?.[0]?.toUpperCase()}
+                  </div>
+                )}
+              </div>
+
+              {/* Vendor Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                    Sold by
+                  </p>
+                  {product.vendor.isVerified && (
+                    <ShieldCheck
+                      size={12}
+                      className="text-green-500 shrink-0"
+                    />
+                  )}
+                </div>
+                <Link
+                  href={`/vendor/${product.vendor.slug}`}
+                  className="group/link inline-flex items-center gap-1"
+                >
+                  <p className="text-sm font-semibold text-gray-900 truncate hover:text-primary transition-colors">
+                    {product.vendor.storeName}
+                  </p>
+                  <span className="text-gray-400 group-hover/link:translate-x-0.5 transition-transform duration-200 text-xs">
+                    →
+                  </span>
+                </Link>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  {product.vendor.isVerified
+                    ? "Verified Seller"
+                    : "Trusted Seller"}
+                </p>
+              </div>
+
+              {/* Visit Store Button */}
+              <Link
+                href={`/vendor/${product.vendor.slug}`}
+                className="shrink-0 text-xs font-medium text-primary hover:text-primary-dark border border-primary/20 hover:border-primary/40 px-3 py-1.5 rounded-xl transition-all duration-200 hover:bg-primary/5"
+              >
+                Visit Store
+              </Link>
             </div>
-            {product.vendor.isVerified && (
-              <ShieldCheck size={16} className="text-green-500 flex-shrink-0" />
-            )}
           </div>
         )}
       </div>

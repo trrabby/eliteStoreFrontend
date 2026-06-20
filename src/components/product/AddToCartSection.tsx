@@ -7,16 +7,7 @@ import { useCart } from "@/lib/hooks/useCart";
 import { computeVariantPrice, formatBDT } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
-import {
-  Minus,
-  Plus,
-  ShoppingBag,
-  Star,
-  Clock,
-  Tag,
-  Zap,
-  ChevronRight,
-} from "lucide-react";
+import { Minus, Plus, ShoppingBag, Star, Clock, Tag } from "lucide-react";
 import Link from "next/link";
 
 interface Variant {
@@ -217,9 +208,9 @@ export function AddToCartSection({
       {/* Classy & High-End Flash Sale Offer Card */}
 
       {flashOffer && timeLeft && timeLeft !== "Ended" && (
-        <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-[#ff3e9b] to-pink-600 rounded-2xl p-5 shadow-md transition-all hover:shadow-lg">
+        <div className="relative overflow-hidden bg-linear-to-br from-orange-500 via-primary to-pink-600 rounded-2xl p-5 shadow-md transition-all hover:shadow-lg">
           {/* Subtle grid overlay */}
-          <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] bg-[size:24px_24px]" />
+          <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] bg-size-[24px_24px]" />
 
           <div className="relative z-10 flex flex-col gap-3">
             <div className="flex items-start justify-between gap-3">
@@ -228,8 +219,8 @@ export function AddToCartSection({
                   {/* Live dot + Flash Sale badge */}
                   <span className="flex items-center gap-1.5 bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full backdrop-blur-sm">
                     <span className="relative flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-dark opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary-dark "></span>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-950 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-yellow-200 "></span>
                     </span>
                     Flash Sale
                   </span>
@@ -267,7 +258,7 @@ export function AddToCartSection({
                 </div>
                 <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-white/80 to-white rounded-full transition-all duration-500"
+                    className="h-full bg-linear-to-r from-white/80 to-white rounded-full transition-all duration-500"
                     style={{ width: `${Math.min(100, flashProgressPercent)}%` }}
                   />
                 </div>
@@ -281,7 +272,7 @@ export function AddToCartSection({
       <div className="space-y-2">
         <div className="flex items-baseline flex-wrap gap-2.5">
           {/* Final Dynamic Price */}
-          <span className="font-display text-3xl md:text-4xl font-black text-[#ff3e9b] tracking-tight">
+          <span className="font-display text-3xl md:text-4xl font-black text-primary tracking-tight">
             {formatBDT(pricing.salePrice)}
           </span>
 
@@ -364,7 +355,7 @@ export function AddToCartSection({
                           className={cn(
                             "px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all duration-200 active:scale-95",
                             isSelected
-                              ? "border-[#ff3e9b] bg-[#ff3e9b]/5 text-[#ff3e9b] shadow-sm"
+                              ? "border-primary bg-primary/5 text-primary shadow-sm"
                               : "border-slate-100 bg-slate-50/50 hover:bg-slate-50 text-slate-700 hover:border-slate-200",
                             !hasStock &&
                               "opacity-40 cursor-not-allowed line-through bg-slate-100 border-transparent text-slate-400 hover:border-transparent",
@@ -392,7 +383,7 @@ export function AddToCartSection({
 
       {/* Action Controls Footer */}
       <div className="flex items-center gap-3 pt-2">
-        <div className="flex items-center bg-slate-50 border border-slate-100 rounded-xl overflow-hidden p-1 shadow-sm flex-shrink-0">
+        <div className="flex items-center bg-slate-50 border border-slate-100 rounded-xl overflow-hidden p-1 shadow-sm shrink-0">
           <button
             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
             disabled={quantity <= 1}
@@ -417,7 +408,7 @@ export function AddToCartSection({
         <button
           onClick={handleAddToCart}
           disabled={adding || selectedVariant.stock < 1}
-          className="flex-1 px-6 py-3.5 bg-[#ff3e9b] hover:bg-[#d4006f] text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-[#ff3e9b]/10 hover:shadow-lg active:scale-[0.99] transition duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+          className="flex-1 px-6 py-3.5 bg-primary cursor-pointer hover:bg-primary-dark text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-[#ff3e9b]/10 hover:shadow-lg active:scale-[0.99] transition duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
         >
           {adding ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

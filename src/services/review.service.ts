@@ -75,7 +75,7 @@ export const getMyReviews = async (params: {
 // create review — customer (verified purchase)
 export const createReview = async (formData: FormData) => {
   try {
-    return await fetchWithAuth("/reviews", {
+    return await fetchWithAuth("/reviews/create", {
       method: "POST",
       headers: {},
       body: formData,
