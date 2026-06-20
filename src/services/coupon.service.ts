@@ -52,7 +52,7 @@ export const getCouponById = async (id: number) => {
 
 export const createCoupon = async (formData: FormData) => {
   try {
-    return await fetchWithAuth("/coupons", {
+    return await fetchWithAuth("/coupons/create", {
       method: "POST",
       headers: {},
       body: formData,

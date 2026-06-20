@@ -22,6 +22,7 @@ import {
   ChevronRight,
   LogOut,
   Menu,
+  BadgePercent,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -44,8 +45,9 @@ const ADMIN_NAV = [
   { icon: Wallet, label: "Withdrawals", href: "/admin/withdrawals" },
   { icon: CreditCard, label: "Payments", href: "/admin/payments" },
   { icon: RotateCcw, label: "Returns", href: "/admin/returns" },
-  { icon: Star, label: "Reviews", href: "/admin/reviews" },
+  { icon: BadgePercent, label: "Flash Sales", href: "/admin/flash-sales" },
   { icon: Tag, label: "Coupons", href: "/admin/coupons" },
+  { icon: Star, label: "Reviews", href: "/admin/reviews" },
   { icon: Wallet, label: "Wallet", href: "/admin/wallet" },
   { icon: Bell, label: "Notifications", href: "/admin/notifications" },
 ];

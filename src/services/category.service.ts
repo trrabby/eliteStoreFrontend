@@ -50,7 +50,7 @@ export const getCategoryById = async (id: number) => {
 // create category — admin
 export const createCategory = async (formData: FormData) => {
   try {
-    return await fetchWithAuth("/categories", {
+    return await fetchWithAuth("/categories/create", {
       method: "POST",
       headers: {},
       body: formData,

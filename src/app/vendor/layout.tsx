@@ -15,6 +15,8 @@ import {
   LogOut,
   Menu,
   Wallet,
+  BadgePercent,
+  Tag,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/shared/Logo";
@@ -31,6 +33,8 @@ const VENDOR_NAV = [
   { icon: ShoppingCart, label: "Orders", href: "/vendor/orders" },
   { icon: Wallet, label: "Withdrawals", href: "/vendor/withdrawals" },
   { icon: Archive, label: "Inventory", href: "/vendor/inventory" },
+  { icon: BadgePercent, label: "Flash Sales", href: "/vendor/flash-sales" },
+  { icon: Tag, label: "Coupons", href: "/vendor/coupons" },
   { icon: Star, label: "Reviews", href: "/vendor/reviews" },
   { icon: Store, label: "My Store", href: "/vendor/store" },
 ];
