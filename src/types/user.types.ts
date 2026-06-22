@@ -151,3 +151,91 @@ export interface Notification {
   isRead: boolean;
   createdAt?: string;
 }
+
+export interface GetUsersParams {
+  // Pagination
+  page?: number;
+  limit?: number;
+
+  // Basic filters
+  search?: string;
+  email?: string;
+  phone?: string;
+  role?: string | string[];
+  isBanned?: boolean;
+  isEmailVerified?: boolean;
+  isActive?: boolean;
+
+  // Date ranges
+  createdAtFrom?: string; // ISO date
+  createdAtTo?: string;
+  lastLoginFrom?: string;
+  lastLoginTo?: string;
+
+  // AccountInfo
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  gender?: string;
+  ageMin?: number;
+  ageMax?: number;
+  dobFrom?: string;
+  dobTo?: string;
+
+  // Address
+  addressCityDistrict?: string;
+  addressCountry?: string;
+  addressPostalCode?: string;
+  addressType?: string;
+  addressIsDefault?: boolean;
+
+  // Order aggregates
+  orderCountMin?: number;
+  orderCountMax?: number;
+  orderTotalSpentMin?: number;
+  orderTotalSpentMax?: number;
+  hasDeliveredOrders?: boolean;
+  hasCancelledOrders?: boolean;
+  hasReturnedOrders?: boolean;
+  orderStatus?: string | string[];
+  returnRequestStatus?: string | string[];
+  returnRequestCountMin?: number;
+  returnRequestCountMax?: number;
+
+  // Product interactions (comma-separated IDs)
+  productInCart?: string;
+  productInWishlist?: string;
+  orderedProduct?: string;
+  reviewedProduct?: string;
+
+  // Vendor
+  isVendor?: boolean;
+  vendorVerified?: boolean;
+  vendorStoreName?: string;
+  vendorRatingMin?: number;
+  vendorRatingMax?: number;
+  vendorTotalSalesMin?: number;
+  vendorTotalSalesMax?: number;
+
+  // Coupon
+  usedCouponCode?: string;
+  usedCouponId?: number;
+
+  // Review
+  hasWrittenReviews?: boolean;
+  reviewRatingMin?: number;
+  reviewRatingMax?: number;
+  reviewCountMin?: number;
+  reviewCountMax?: number;
+
+  // Wallet
+  walletBalanceMin?: number;
+  walletBalanceMax?: number;
+
+  // Session
+  hasActiveSession?: boolean;
+
+  // Sorting
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}

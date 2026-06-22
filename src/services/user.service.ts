@@ -2,12 +2,14 @@
 "use server";
 
 import { buildQuery } from "@/lib/utils/buildQuery";
-
 import { fetchWithAuth } from "./helpers";
-
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
-
-import type { IUser, IAddress, IUserResponse } from "@/types/user.types";
+import type {
+  IUser,
+  IAddress,
+  IUserResponse,
+  GetUsersParams,
+} from "@/types/user.types";
 import { config } from "@/config";
 import { cookies } from "next/headers";
 
@@ -86,23 +88,19 @@ export const deleteMyProfile = async (
 // USERS (ADMIN)
 // ======================================
 
-interface GetUsersParams {
-  page?: number;
-  limit?: number;
-  role?: string;
-  search?: string;
-}
-
+// Service function
 export const getAllUsers = async (
   params: GetUsersParams,
 ): Promise<PaginatedResponse<any>> => {
   return fetchWithAuth(`/users${buildQuery(params)}`);
 };
 
-export const getUserByEmail = async (
-  email: string,
+export const getUserByEmailOrID = async (
+  idOrEmail: string,
 ): Promise<ApiResponse<IUser>> => {
-  const res = await fetch(`${config().Backend_URL}/users/by-email/${email}`);
+  const res = await fetch(
+    `${config().Backend_URL}/users/user-details/${idOrEmail}`,
+  );
   // console.log("getUserByEmail response:", res);
   return res.json();
 };

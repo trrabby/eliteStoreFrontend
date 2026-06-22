@@ -3,7 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import { config } from "@/config";
 import { cookies } from "next/headers";
-import { getUserByEmail } from "@/services/user.service";
+import { getUserByEmailOrID } from "@/services/user.service";
 
 // ✅ Extend types
 declare module "next-auth" {
@@ -62,7 +62,7 @@ const authOptions: NextAuthOptions = {
         //   user,
         // );
 
-        const existingUser = await getUserByEmail(user.email as string);
+        const existingUser = await getUserByEmailOrID(user.email as string);
         // console.log("Existing User:", existingUser);
         // Auto-register if user doesn’t exist
         if (!existingUser?.data && user?.email && providerToken) {
