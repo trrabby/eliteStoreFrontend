@@ -14,6 +14,7 @@ import {
   Layers,
   FolderOpen,
   Folder,
+  Upload,
 } from "lucide-react";
 import {
   getAllCategories,
@@ -23,6 +24,7 @@ import {
 } from "@/services/category.service";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils/cn";
+import Image from "next/image";
 
 type Cat = {
   id: number;
@@ -66,7 +68,6 @@ const DEPTH_COLORS = [
 
 const DEPTH_INDENT = ["pl-0", "pl-6", "pl-12", "pl-18"];
 
-/* ── Category Modal ────────────────────────────────────────── */
 function CategoryModal({
   cat,
   allFlat,
@@ -78,20 +79,27 @@ function CategoryModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [name, setName] = useState(cat?.name ?? "");
-  const [desc, setDesc] = useState(cat?.description ?? "");
-  const [parentId, setParentId] = useState<string>(
-    cat?.parentId ? String(cat.parentId) : "",
-  );
-  const [isActive, setIsActive] = useState(cat?.isActive ?? true);
+  const [form, setForm] = useState({
+    name: cat?.name ?? "",
+    description: cat?.description ?? "",
+    parentId: cat?.parentId ? String(cat.parentId) : "",
+    sortOrder: String(cat?._count ? 0 : 0), // pulled from cat if available
+    isActive: cat?.isActive ?? true,
+    metaTitle: "",
+    metaDesc: "",
+  });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [imagePrev, setImagePrev] = useState<string>("");
+  const [iconPrev, setIconPrev] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
-  /* Only allow selecting as parent if depth < 3 */
   const parentOptions = allFlat.filter((c) => c.id !== cat?.id && c.depth < 3);
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
+    if (!form.name.trim()) {
       toast.error("Name is required");
       return;
     }
@@ -101,12 +109,18 @@ function CategoryModal({
     fd.append(
       "data",
       JSON.stringify({
-        name,
-        description: desc || undefined,
-        parentId: parentId ? Number(parentId) : undefined,
-        isActive,
+        name: form.name,
+        description: form.description || undefined,
+        parentId: form.parentId ? Number(form.parentId) : undefined,
+        sortOrder: Number(form.sortOrder) || 0,
+        isActive: form.isActive,
+        metaTitle: form.metaTitle || undefined,
+        metaDesc: form.metaDesc || undefined,
       }),
     );
+
+    if (imageFile) fd.append("image", imageFile); // field name: image
+    if (iconFile) fd.append("icon", iconFile); // field name: icon
 
     const res = cat
       ? await updateCategory(cat.id, fd)
@@ -138,8 +152,8 @@ function CategoryModal({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 mx-auto max-w-md
-                   bg-white rounded-3xl p-6 shadow-2xl"
+        className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 mx-auto max-w-lg
+                   bg-white rounded-3xl p-6 shadow-2xl overflow-y-auto max-h-[90vh]"
       >
         <div className="flex items-center justify-between mb-5">
           <div>
@@ -148,7 +162,7 @@ function CategoryModal({
             </h3>
             {cat && (
               <p className="text-xs text-gray-400 mt-0.5">
-                Depth level {cat.depth} · {cat._count?.products ?? 0} products
+                Depth L{cat.depth} · {cat._count?.products ?? 0} products
               </p>
             )}
           </div>
@@ -161,63 +175,187 @@ function CategoryModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">
-              Name *
-            </label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Electronics"
-              className={inputCls}
-            />
+          {/* Image + Icon uploads */}
+          <div className="flex gap-4">
+            {/* Category Image */}
+            <div>
+              <p className="text-xs font-medium text-gray-700 mb-1.5">Image</p>
+              <label
+                className="relative w-20 h-20 rounded-xl border-2 border-dashed border-gray-200
+                                hover:border-primary transition-colors cursor-pointer
+                                bg-gray-50 flex items-center justify-center group overflow-hidden block"
+              >
+                {imagePrev ? (
+                  <Image
+                    src={imagePrev}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    width={400}
+                    height={300}
+                  />
+                ) : (
+                  <Upload
+                    size={16}
+                    className="text-gray-300 group-hover:text-primary"
+                  />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    setImageFile(f);
+                    setImagePrev(URL.createObjectURL(f));
+                  }}
+                />
+              </label>
+            </div>
+
+            {/* Category Icon */}
+            <div>
+              <p className="text-xs font-medium text-gray-700 mb-1.5">Icon</p>
+              <label
+                className="relative w-20 h-20 rounded-xl border-2 border-dashed border-gray-200
+                                hover:border-primary transition-colors cursor-pointer
+                                bg-gray-50 flex items-center justify-center group overflow-hidden block"
+              >
+                {iconPrev ? (
+                  <Image
+                    src={iconPrev}
+                    alt=""
+                    className="w-full h-full object-contain p-2"
+                    height={30}
+                    width={30}
+                  />
+                ) : (
+                  <Upload
+                    size={16}
+                    className="text-gray-300 group-hover:text-primary"
+                  />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    setIconFile(f);
+                    setIconPrev(URL.createObjectURL(f));
+                  }}
+                />
+              </label>
+            </div>
+
+            {/* Name (takes remaining space) */}
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                Name *
+              </label>
+              <input
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+                placeholder="e.g. Electronics"
+                className={inputCls}
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">
-              Parent Category
-            </label>
-            <select
-              value={parentId}
-              onChange={(e) => setParentId(e.target.value)}
-              className={`${inputCls} bg-white`}
-            >
-              <option value="">— Root category —</option>
-              {parentOptions.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {"  ".repeat(p.depth)}
-                  {p.depth > 0 ? "↳ " : ""}
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
+          {/* Description */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1.5">
               Description
             </label>
             <textarea
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              rows={3}
-              placeholder="Optional description..."
+              value={form.description}
+              onChange={(e) => set("description", e.target.value)}
+              rows={2}
+              placeholder="Optional..."
               className={`${inputCls} resize-none`}
             />
           </div>
 
+          {/* Parent + Sort Order */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                Parent Category
+              </label>
+              <select
+                value={form.parentId}
+                onChange={(e) => set("parentId", e.target.value)}
+                className={`${inputCls} bg-white`}
+              >
+                <option value="">— Root —</option>
+                {parentOptions.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {"  ".repeat(p.depth)}
+                    {p.depth > 0 ? "↳ " : ""}
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                Sort Order
+              </label>
+              <input
+                type="number"
+                value={form.sortOrder}
+                onChange={(e) => set("sortOrder", e.target.value)}
+                placeholder="0"
+                min={0}
+                className={inputCls}
+              />
+            </div>
+          </div>
+
+          {/* SEO */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              SEO (optional)
+            </p>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                Meta Title
+              </label>
+              <input
+                value={form.metaTitle}
+                onChange={(e) => set("metaTitle", e.target.value)}
+                placeholder="SEO title..."
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                Meta Description
+              </label>
+              <textarea
+                value={form.metaDesc}
+                onChange={(e) => set("metaDesc", e.target.value)}
+                rows={2}
+                placeholder="SEO description..."
+                className={`${inputCls} resize-none`}
+              />
+            </div>
+          </div>
+
+          {/* Active toggle */}
           <label className="flex items-center gap-3 cursor-pointer">
             <div
-              onClick={() => setIsActive(!isActive)}
+              onClick={() => set("isActive", !form.isActive)}
               className={cn(
                 "w-10 h-5 rounded-full relative transition-colors",
-                isActive ? "bg-primary" : "bg-gray-300",
+                form.isActive ? "bg-primary" : "bg-gray-300",
               )}
             >
               <div
                 className={cn(
                   "absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform",
-                  isActive ? "translate-x-5" : "translate-x-0.5",
+                  form.isActive ? "translate-x-5" : "translate-x-0.5",
                 )}
               />
             </div>

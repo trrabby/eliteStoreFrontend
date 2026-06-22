@@ -2,13 +2,11 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Zap,
   Plus,
-  X,
   Clock,
   CheckCircle,
   XCircle,
@@ -17,7 +15,7 @@ import {
   Play,
   Square,
   RefreshCw,
-  BarChart2,
+  Package,
 } from "lucide-react";
 import {
   getAdminFlashSales,
@@ -32,6 +30,7 @@ import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
+import { FlashSaleItemsModal } from "@/components/shared/FlashSaleModal";
 
 const STATUS_META: Record<string, { color: string; icon: any; label: string }> =
   {
@@ -62,6 +61,7 @@ export default function AdminFlashSalesPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("ALL");
   const [page, setPage] = useState(1);
+  const [managing, setManaging] = useState<any | null>(null);
   const limit = 15;
 
   const load = async () => {
@@ -150,7 +150,6 @@ export default function AdminFlashSalesPage() {
           </Link>
         </div>
       </div>
-
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
@@ -175,7 +174,6 @@ export default function AdminFlashSalesPage() {
           </div>
         ))}
       </div>
-
       {/* Tabs */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide">
         {TABS.map((t) => (
@@ -196,7 +194,6 @@ export default function AdminFlashSalesPage() {
           </button>
         ))}
       </div>
-
       {/* Table */}
       <div className="card overflow-hidden">
         {loading ? (
@@ -311,6 +308,13 @@ export default function AdminFlashSalesPage() {
 
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setManaging(s)}
+                              className="p-1.5 text-gray-400 hover:text-primary rounded-lg hover:bg-primary-pale"
+                              title="Manage items"
+                            >
+                              <Package size={13} />
+                            </button>
                             <Link
                               href={`/flash-sales/${s.slug}`}
                               className="p-1.5 text-gray-400 hover:text-primary rounded-lg hover:bg-primary-pale"
@@ -377,6 +381,18 @@ export default function AdminFlashSalesPage() {
           </>
         )}
       </div>
+
+      <AnimatePresence>
+        {managing && (
+          <FlashSaleItemsModal
+            sale={managing}
+            onClose={() => {
+              setManaging(null);
+              load();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

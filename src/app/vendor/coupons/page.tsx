@@ -14,6 +14,7 @@ import {
   AlertCircle,
   ToggleLeft,
   ToggleRight,
+  Store,
 } from "lucide-react";
 import {
   getAllCoupons,
@@ -21,6 +22,7 @@ import {
   updateCoupon,
   deleteCoupon,
   toggleCouponStatus,
+  getMyCoupons,
 } from "@/services/coupon.service";
 import { formatDate } from "@/lib/utils/date";
 import { formatBDT } from "@/lib/utils/currency";
@@ -297,7 +299,8 @@ export default function VendorCouponsPage() {
 
   const load = async () => {
     setLoading(true);
-    const res = await getAllCoupons({ limit });
+    // Vendor sees only their own coupons
+    const res = await getMyCoupons({ limit });
     if (res?.success) {
       setCoupons(res.data?.coupons ?? res.data ?? []);
       setTotal(res.data?.total ?? 0);
@@ -353,8 +356,10 @@ export default function VendorCouponsPage() {
       <div className="bg-primary-pale border border-primary/20 rounded-2xl p-4 flex items-start gap-3">
         <AlertCircle size={16} className="text-primary mt-0.5 shrink-0" />
         <p className="text-sm text-gray-700">
-          Coupons you create are available to all customers. Share your coupon
-          codes through your store page or social channels.
+          Coupons you create are{" "}
+          <strong>automatically scoped to your store</strong> — they only apply
+          to products from your shop, not from other vendors. Share coupon codes
+          through your store page or social channels.
         </p>
       </div>
 
@@ -414,6 +419,7 @@ export default function VendorCouponsPage() {
                             className="opacity-0 group-hover:opacity-100 transition-opacity"
                           />
                         </button>
+
                         {expired ? (
                           <span className="text-xs bg-red-50 text-red-400 px-2 py-0.5 rounded-full">
                             Expired
@@ -427,6 +433,10 @@ export default function VendorCouponsPage() {
                             Inactive
                           </span>
                         )}
+
+                        <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                          <Store size={9} /> Your Store Only
+                        </span>
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {c.discountType === "PERCENTAGE"

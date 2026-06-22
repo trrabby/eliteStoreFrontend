@@ -14,6 +14,7 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  Package,
 } from "lucide-react";
 import {
   getMyFlashSales,
@@ -27,6 +28,7 @@ import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import Link from "next/link";
 import { X } from "lucide-react";
+import { FlashSaleItemsModal } from "@/components/shared/FlashSaleModal";
 
 const STATUS_META: Record<string, { color: string; icon: any; label: string }> =
   {
@@ -225,6 +227,7 @@ export default function VendorFlashSalesPage() {
   const [tab, setTab] = useState("ALL");
   const [page, setPage] = useState(1);
   const [showCreate, setShowCreate] = useState(false);
+  const [managing, setManaging] = useState<any | null>(null);
   const limit = 10;
 
   const load = async () => {
@@ -301,7 +304,7 @@ export default function VendorFlashSalesPage() {
       </div>
 
       {/* Banner */}
-      <div className="bg-gradient-to-r from-orange-500 to-primary rounded-2xl p-5 text-white flex items-center gap-4">
+      <div className="bg-linear-to-r from-orange-500 to-primary rounded-2xl p-5 text-white flex items-center gap-4">
         <motion.div
           animate={{ scale: [1, 1.15, 1] }}
           transition={{ duration: 1.5, repeat: Infinity }}
@@ -371,7 +374,7 @@ export default function VendorFlashSalesPage() {
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <div
-                      className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-primary
+                      className="w-10 h-10 rounded-xl bg-linear-to-br from-orange-400 to-primary
                                     flex items-center justify-center shrink-0"
                     >
                       <Zap size={16} className="text-white fill-white" />
@@ -414,45 +417,46 @@ export default function VendorFlashSalesPage() {
                   </p>
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-2 flex-wrap">
-                  <Link
-                    href={`/flash-sales/${s.slug}`}
-                    className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary
-                               border border-gray-200 rounded-xl px-3 py-2 transition-colors"
-                  >
-                    <Eye size={12} /> View
-                  </Link>
-
-                  {s.status === "DRAFT" && (
-                    <>
-                      {/* TODO: link to /vendor/flash-sales/[publicId]/edit */}
-                      <button
-                        onClick={() => handleActivate(s.publicId)}
-                        className="flex items-center gap-1.5 text-xs text-green-600 border border-green-200
-                                   rounded-xl px-3 py-2 hover:bg-green-50 transition-colors"
-                      >
-                        <Play size={12} /> Activate
-                      </button>
-                      <button
-                        onClick={() => handleDelete(s.publicId)}
-                        className="flex items-center gap-1.5 text-xs text-red-500 border border-red-200
-                                   rounded-xl px-3 py-2 hover:bg-red-50 transition-colors"
-                      >
-                        <Trash2 size={12} /> Delete
-                      </button>
-                    </>
-                  )}
-
-                  {s.status === "ACTIVE" && (
+                <div className="px-4 py-3">
+                  <div className="flex items-center gap-1">
                     <button
-                      onClick={() => handleCancel(s.publicId)}
-                      className="flex items-center gap-1.5 text-xs text-red-500 border border-red-200
-                                 rounded-xl px-3 py-2 hover:bg-red-50 transition-colors"
+                      onClick={() => setManaging(s)}
+                      className="p-1.5 text-gray-400 hover:text-primary rounded-lg hover:bg-primary-pale"
+                      title="Manage items"
                     >
-                      <Square size={12} /> Cancel
+                      <Package size={13} />
                     </button>
-                  )}
+                    <Link
+                      href={`/flash-sales/${s.slug}`}
+                      className="p-1.5 text-gray-400 hover:text-primary rounded-lg hover:bg-primary-pale"
+                    >
+                      <Eye size={13} />
+                    </Link>
+                    {s.status === "DRAFT" && (
+                      <>
+                        <button
+                          onClick={() => handleActivate(s.publicId)}
+                          className="p-1.5 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50"
+                        >
+                          <Play size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(s.publicId)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </>
+                    )}
+                    {s.status === "ACTIVE" && (
+                      <button
+                        onClick={() => handleCancel(s.publicId)}
+                        className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50"
+                      >
+                        <Square size={13} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             );
@@ -491,6 +495,18 @@ export default function VendorFlashSalesPage() {
             onClose={() => setShowCreate(false)}
             onCreated={() => {
               setShowCreate(false);
+              load();
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {managing && (
+          <FlashSaleItemsModal
+            sale={managing}
+            onClose={() => {
+              setManaging(null);
               load();
             }}
           />

@@ -63,7 +63,7 @@ export const createCategory = async (formData: FormData) => {
 // update category — admin
 export const updateCategory = async (id: number, formData: FormData) => {
   try {
-    return await fetchWithAuth(`/categories/${id}`, {
+    return await fetchWithAuth(`/categories/update/${id}`, {
       method: "PATCH",
       headers: {},
       body: formData,

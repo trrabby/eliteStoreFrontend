@@ -26,6 +26,20 @@ export const getMyCouponHistory = async () => {
   }
 };
 
+export const getMyCoupons = async (params: {
+  page?: number;
+  limit?: number;
+  isActive?: boolean;
+  search?: string;
+  isExpired?: boolean;
+}) => {
+  try {
+    return await fetchWithAuth(`/coupons/my-coupons/${buildQuery(params)}`);
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
 // ─── Admin ────────────────────────────────
 
 export const getAllCoupons = async (params: {

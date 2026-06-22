@@ -14,7 +14,7 @@ export const getAllBrands = async (params: {
   country?: string;
 }) => {
   try {
-    return await fetchPublic(`/brands${buildQuery(params)}`, {}, 300);
+    return await fetchPublic(`/brands${buildQuery(params)}`, {}, 0);
   } catch (error: any) {
     return Error(error);
   }
@@ -87,7 +87,7 @@ export const toggleBrandFeatured = async (id: number) => {
 // delete brand — admin
 export const deleteBrand = async (id: number) => {
   try {
-    return await fetchWithAuth(`/brands/${id}`, { method: "DELETE" });
+    return await fetchWithAuth(`/brands/delete/${id}`, { method: "DELETE" });
   } catch (error: any) {
     return Error(error);
   }

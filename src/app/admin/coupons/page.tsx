@@ -17,6 +17,7 @@ import {
   Clock,
   XCircle,
   Copy,
+  Store,
 } from "lucide-react";
 import {
   getAllCoupons,
@@ -495,6 +496,7 @@ export default function AdminCouponsPage() {
                         className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50"
                       >
                         {/* Code */}
+
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-xl bg-primary-pale flex items-center justify-center">
@@ -503,8 +505,7 @@ export default function AdminCouponsPage() {
                             <div>
                               <button
                                 onClick={() => handleCopyCode(c.code)}
-                                className="font-mono font-bold text-sm text-gray-900 hover:text-primary
-                                           flex items-center gap-1 group"
+                                className="font-mono font-bold text-sm text-gray-900 hover:text-primary flex items-center gap-1 group"
                               >
                                 {c.code}
                                 <Copy
@@ -512,8 +513,22 @@ export default function AdminCouponsPage() {
                                   className="opacity-0 group-hover:opacity-100 transition-opacity"
                                 />
                               </button>
+                              {/* Vendor badge */}
+                              {(c as any).vendor ? (
+                                <span
+                                  className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600
+                         px-2 py-0.5 rounded-full mt-0.5"
+                                >
+                                  <Store size={9} />{" "}
+                                  {(c as any).vendor.storeName}
+                                </span>
+                              ) : (
+                                <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full mt-0.5">
+                                  Platform-wide
+                                </span>
+                              )}
                               {c.description && (
-                                <p className="text-xs text-gray-400 max-w-[140px] truncate">
+                                <p className="text-xs text-gray-400 max-w-[140px] truncate mt-0.5">
                                   {c.description}
                                 </p>
                               )}
