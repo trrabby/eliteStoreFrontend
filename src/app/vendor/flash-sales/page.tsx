@@ -15,6 +15,9 @@ import {
   CheckCircle,
   XCircle,
   Package,
+  Calendar,
+  ChevronRight,
+  Store,
 } from "lucide-react";
 import {
   getMyFlashSales,
@@ -28,7 +31,7 @@ import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import Link from "next/link";
 import { X } from "lucide-react";
-import { FlashSaleItemsModal } from "@/components/shared/FlashSaleModal";
+import { FlashSaleItemsModal } from "@/components/shared/FlashSaleModal"; // We'll update this component
 
 const STATUS_META: Record<string, { color: string; icon: any; label: string }> =
   {
@@ -340,11 +343,11 @@ export default function VendorFlashSalesPage() {
         ))}
       </div>
 
-      {/* Cards */}
+      {/* Row View */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="skeleton h-40 rounded-2xl" />
+            <div key={i} className="skeleton h-20 rounded-2xl" />
           ))}
         </div>
       ) : sales.length === 0 ? (
@@ -359,108 +362,158 @@ export default function VendorFlashSalesPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {sales.map((s, i) => {
-            const meta = STATUS_META[s.status] ?? STATUS_META.DRAFT;
-            return (
-              <motion.div
-                key={s.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="card p-5 hover:shadow-md transition-shadow"
-              >
-                {/* Top row */}
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div
-                      className="w-10 h-10 rounded-xl bg-linear-to-br from-orange-400 to-primary
-                                    flex items-center justify-center shrink-0"
-                    >
-                      <Zap size={16} className="text-white fill-white" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
-                        {s.title}
-                      </p>
-                      <span
-                        className={cn(
-                          "text-xs px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1 mt-0.5",
-                          meta.color,
-                        )}
-                      >
-                        <meta.icon size={10} /> {meta.label}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-display text-2xl font-bold text-primary">
-                      {s._count?.items ?? 0}
-                    </p>
-                    <p className="text-xs text-gray-400">items</p>
-                  </div>
-                </div>
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50/80 text-gray-500 font-medium text-xs uppercase">
+                <tr>
+                  <th className="px-4 py-3 text-left">Title</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Items</th>
+                  <th className="px-4 py-3 text-left">Period</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {sales.map((s, i) => {
+                  const meta = STATUS_META[s.status] ?? STATUS_META.DRAFT;
+                  const itemCount = s._count?.items ?? 0;
+                  const isAdminOffer = s.vendorId === null;
 
-                {/* Dates */}
-                <div className="text-xs text-gray-400 space-y-0.5 mb-4">
-                  <p>
-                    Start:{" "}
-                    <span className="text-gray-600">
-                      {formatDate(s.startsAt)}
-                    </span>
-                  </p>
-                  <p>
-                    End:{" "}
-                    <span className="text-gray-600">
-                      {formatDate(s.endsAt)}
-                    </span>
-                  </p>
-                </div>
-
-                <div className="px-4 py-3">
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setManaging(s)}
-                      className="p-1.5 text-gray-400 hover:text-primary rounded-lg hover:bg-primary-pale"
-                      title="Manage items"
+                  return (
+                    <motion.tr
+                      key={s.id}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="hover:bg-gray-50/50 transition-colors"
                     >
-                      <Package size={13} />
-                    </button>
-                    <Link
-                      href={`/flash-sales/${s.slug}`}
-                      className="p-1.5 text-gray-400 hover:text-primary rounded-lg hover:bg-primary-pale"
-                    >
-                      <Eye size={13} />
-                    </Link>
-                    {s.status === "DRAFT" && (
-                      <>
-                        <button
-                          onClick={() => handleActivate(s.publicId)}
-                          className="p-1.5 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50"
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-8 h-8 rounded-lg bg-linear-to-br from-orange-400 to-primary
+                                          flex items-center justify-center shrink-0"
+                          >
+                            <Zap size={14} className="text-white fill-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 truncate max-w-[200px]">
+                              {s.title}
+                            </p>
+                            {isAdminOffer && (
+                              <span className="inline-flex items-center gap-1 text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full">
+                                <Store size={10} /> Admin Offer
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={cn(
+                            "text-xs px-2.5 py-1 rounded-full font-medium inline-flex items-center gap-1",
+                            meta.color,
+                          )}
                         >
-                          <Play size={13} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(s.publicId)}
-                          className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </>
-                    )}
-                    {s.status === "ACTIVE" && (
-                      <button
-                        onClick={() => handleCancel(s.publicId)}
-                        className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50"
-                      >
-                        <Square size={13} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
+                          <meta.icon size={12} /> {meta.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-700">
+                            {itemCount}
+                          </span>
+                          <span className="text-gray-400 text-xs">items</span>
+                          {itemCount > 0 && (
+                            <div className="flex -space-x-1 ml-1">
+                              {s.items
+                                ?.slice(0, 3)
+                                .map((item: any, idx: number) => (
+                                  <div
+                                    key={idx}
+                                    className="w-6 h-6 rounded-full bg-gray-100 border border-white overflow-hidden"
+                                  >
+                                    {item.product?.images?.[0]?.url ? (
+                                      <img
+                                        src={item.product.images[0].url}
+                                        alt=""
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-[8px] text-gray-400">
+                                        <Package size={10} />
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              {itemCount > 3 && (
+                                <div className="w-6 h-6 rounded-full bg-gray-200 border border-white flex items-center justify-center text-[8px] font-medium text-gray-600">
+                                  +{itemCount - 3}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500">
+                        <div className="flex flex-col">
+                          <span className="flex items-center gap-1">
+                            <Calendar size={12} className="text-gray-400" />
+                            {formatDate(s.startsAt)}
+                          </span>
+                          <span className="flex items-center gap-1 mt-0.5">
+                            <ChevronRight size={12} className="text-gray-300" />
+                            {formatDate(s.endsAt)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setManaging(s)}
+                            className="p-1.5 text-gray-400 hover:text-primary rounded-lg hover:bg-primary-pale transition-colors"
+                            title="Manage items"
+                          >
+                            <Package size={14} />
+                          </button>
+                          <Link
+                            href={`/flash-sales/${s.slug}`}
+                            className="p-1.5 text-gray-400 hover:text-primary rounded-lg hover:bg-primary-pale transition-colors"
+                          >
+                            <Eye size={14} />
+                          </Link>
+                          {s.status === "DRAFT" && (
+                            <>
+                              <button
+                                onClick={() => handleActivate(s.publicId)}
+                                className="p-1.5 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition-colors"
+                              >
+                                <Play size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(s.publicId)}
+                                className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                          {s.status === "ACTIVE" && (
+                            <button
+                              onClick={() => handleCancel(s.publicId)}
+                              className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                            >
+                              <Square size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
