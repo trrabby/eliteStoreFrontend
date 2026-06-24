@@ -1,92 +1,182 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
-import { getProductById } from "@/services/product.service";
+import { getProductBySlug, getProductById } from "@/services/product.service";
+import { computeVariantPrice } from "../utils/currency";
 
 export type DisplayCartItem = {
+  // Identity
   variantId: number;
   productId: number;
   quantity: number;
+  slug: string;
+  // Product info
   productName: string;
   productSlug: string;
   imageUrl: string;
+  // Variant info
   variantName: string;
   sku: string;
-  price: number;
-  comparePrice: number | null;
+  // Pricing — raw
+  price: number; // variant.price (system price)
+  comparePrice: number | null; // variant.comparePrice (sticker)
+  // Pricing — computed (USE THESE FOR DISPLAY)
+  salePrice: number; // final price after all discounts
+  basePrice: number; // highest sticker price
+  hasDiscount: boolean;
+  totalDiscountPercent: number;
+  totalDiscountAmount: number;
+  flashSaleLabel: string | null;
+  // Stock
   stock: number;
+  // Vendor
   vendorId: number;
   vendorName: string;
+  vendorSlug: string | null;
+};
+
+export type VendorCartGroup = {
+  vendorId: number;
+  vendorName: string;
+  vendorSlug: string | null;
+  items: DisplayCartItem[];
+  subtotal: number; // based on salePrice
 };
 
 export function useCartDisplay() {
   const items = useSelector((s: RootState) => s.cart.items);
-  const [productData, setProductData] = useState<Record<number, any>>({});
+  const [productCache, setProductCache] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
-  const fetchedIds = useRef<Set<number>>(new Set());
 
-  const productIds = useMemo(
-    () => [...new Set(items.map((i) => i.productId))],
-    [items],
-  );
-
-  useEffect(() => {
-    if (productIds.length === 0) {
-      setProductData({});
-      fetchedIds.current.clear();
-      return;
+  /* ── Build a list of unique product identifiers ── */
+  const productIdentifiers = useMemo(() => {
+    const ids: { slug?: string; id?: number }[] = [];
+    for (const item of items) {
+      const cartItem = item as any;
+      // Prefer slug if available
+      if (cartItem.slug) {
+        ids.push({ slug: cartItem.slug });
+      } else if (cartItem.productId) {
+        ids.push({ id: cartItem.productId });
+      } else {
+        console.warn("Cart item missing slug or productId", cartItem);
+      }
     }
+    return ids;
+  }, [items]);
 
-    const toFetch = productIds.filter((id) => !fetchedIds.current.has(id));
-    if (toFetch.length === 0) return;
+  /* ── Fetch missing products ── */
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const missing: any[] = [];
+      const cacheKeys = Object.keys(productCache);
 
-    setLoading(true);
+      for (const id of productIdentifiers) {
+        const key = id.slug || `id-${id.id}`;
+        if (!productCache[key]) {
+          missing.push(id);
+        }
+      }
 
-    Promise.all(toFetch.map((id) => getProductById(id)))
-      .then((results) => {
-        const updates: Record<number, any> = {};
-        toFetch.forEach((id, index) => {
-          const res = results[index];
-          fetchedIds.current.add(id);
-          if (res?.success && res.data) {
-            updates[id] = res.data;
+      if (missing.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+
+      const fetchPromises = missing.map(async (id) => {
+        try {
+          let res;
+          if (id.slug) {
+            res = await getProductBySlug(id.slug);
+          } else if (id.id) {
+            res = await getProductById(id.id);
           } else {
-            updates[id] = {
-              name: "Unavailable",
-              slug: "#",
-              images: [],
-              variants: [],
-              vendorId: 0, // fallback
-            };
+            return null;
           }
-        });
-        setProductData((prev) => ({ ...prev, ...updates }));
-      })
-      .catch(() => {
-        toFetch.forEach((id) => fetchedIds.current.add(id));
-      })
-      .finally(() => setLoading(false));
-  }, [productIds]);
+          if (res?.success && res?.data) {
+            return { key: id.slug || `id-${id.id}`, product: res.data };
+          }
+          return null;
+        } catch (err) {
+          console.error("Failed to fetch product", id, err);
+          return null;
+        }
+      });
 
+      const results = await Promise.all(fetchPromises);
+      const updates: Record<string, any> = {};
+      for (const result of results) {
+        if (result) {
+          updates[result.key] = result.product;
+        }
+      }
+
+      setProductCache((prev) => ({ ...prev, ...updates }));
+      setLoading(false);
+    };
+
+    if (productIdentifiers.length > 0) {
+      fetchProducts();
+    } else {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productIdentifiers]);
+
+  /* ── Build display items with computed pricing ── */
   const displayItems: DisplayCartItem[] = useMemo(() => {
     const result: DisplayCartItem[] = [];
 
     for (const item of items) {
-      const product = productData[item.productId];
-      if (!product) continue;
+      const cartItem = item as any;
+      let product: any = null;
 
+      // Find product in cache by slug or ID
+      if (cartItem.slug) {
+        product = productCache[cartItem.slug];
+      } else if (cartItem.productId) {
+        product = productCache[`id-${cartItem.productId}`];
+      }
+
+      if (!product) {
+        // Product data not loaded yet – skip this item (will appear once loaded)
+        continue;
+      }
+
+      // Find the specific variant
       const variant = product.variants?.find(
-        (v: any) => v.id === item.variantId,
+        (v: any) => v.id === cartItem.variantId,
       );
-      if (!variant) continue;
+      if (!variant) {
+        console.warn(
+          `Variant ${cartItem.variantId} not found in product`,
+          product,
+        );
+        continue;
+      }
+
+      /* ── Compute price using your utility ── */
+      const flashOffer = product.flashSaleItem?.isActive
+        ? product.flashSaleItem
+        : null;
+
+      const priceResult = computeVariantPrice(
+        Number(variant.price),
+        variant.comparePrice ? Number(variant.comparePrice) : null,
+        flashOffer,
+      );
 
       result.push({
-        variantId: item.variantId,
-        productId: item.productId,
-        quantity: item.quantity,
+        variantId: cartItem.variantId,
+        productId: cartItem.productId,
+        quantity: cartItem.quantity,
+        slug: product.slug,
         productName: product.name,
         productSlug: product.slug,
         imageUrl: product.images?.[0]?.url ?? "",
@@ -96,31 +186,72 @@ export function useCartDisplay() {
         comparePrice: variant.comparePrice
           ? Number(variant.comparePrice)
           : null,
+        salePrice: priceResult.salePrice,
+        basePrice: priceResult.basePrice,
+        hasDiscount: priceResult.hasDiscount,
+        totalDiscountPercent: priceResult.totalDiscountPercent,
+        totalDiscountAmount: priceResult.totalDiscountAmount,
+        flashSaleLabel: flashOffer ? "Flash Sale" : null,
         stock: variant.stock,
-        vendorId: product.vendorId ?? 0,
-        vendorName: product.vendor?.storeName ?? "Unknown Vendor",
+        vendorId: product.vendor?.id ?? product.vendorId ?? 0,
+        vendorName: product.vendor?.storeName ?? "Store",
+        vendorSlug: product.vendor?.slug ?? null,
       });
     }
 
     return result;
-  }, [items, productData]);
+  }, [items, productCache]);
 
+  /* ── Vendor groups ── */
+  const vendorGroups: VendorCartGroup[] = useMemo(() => {
+    const map = new Map<number, VendorCartGroup>();
+
+    for (const item of displayItems) {
+      if (!map.has(item.vendorId)) {
+        map.set(item.vendorId, {
+          vendorId: item.vendorId,
+          vendorName: item.vendorName,
+          vendorSlug: item.vendorSlug,
+          items: [],
+          subtotal: 0,
+        });
+      }
+      const group = map.get(item.vendorId)!;
+      group.items.push(item);
+      group.subtotal += item.salePrice * item.quantity;
+    }
+
+    return Array.from(map.values());
+  }, [displayItems]);
+
+  /* ── Aggregates (based on salePrice) ── */
   const subtotal = useMemo(
-    () =>
-      displayItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    () => displayItems.reduce((s, i) => s + i.salePrice * i.quantity, 0),
     [displayItems],
   );
 
   const savings = useMemo(
     () =>
-      displayItems.reduce((sum, item) => {
-        if (item.comparePrice && item.comparePrice > item.price) {
-          return sum + (item.comparePrice - item.price) * item.quantity;
-        }
-        return sum;
+      displayItems.reduce((s, i) => {
+        const saved = (i.basePrice - i.salePrice) * i.quantity;
+        return s + Math.max(0, saved);
       }, 0),
     [displayItems],
   );
 
-  return { displayItems, loading, subtotal, savings };
+  // Determine if we're still loading
+  const isLoading =
+    productIdentifiers.length > 0 &&
+    productIdentifiers.some((id) => {
+      const key = id.slug || `id-${id.id}`;
+      return !productCache[key];
+    });
+
+  return {
+    displayItems,
+    vendorGroups,
+    loading: isLoading,
+    subtotal,
+    savings,
+  };
 }

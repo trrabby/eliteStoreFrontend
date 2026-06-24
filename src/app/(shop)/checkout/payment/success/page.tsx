@@ -16,11 +16,17 @@ const Player = dynamic(
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
-  const orderNumber = searchParams.get("order");
   const dispatch = useAppDispatch();
 
+  /* Support both ?order=X and ?orders=X,Y,Z */
+  const ordersParam =
+    searchParams.get("orders") ?? searchParams.get("order") ?? "";
+  const orderNumbers = ordersParam
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   useEffect(() => {
-    // ensure cleanup on success
     dispatch(resetCheckout());
     dispatch(clearCart());
   }, [dispatch]);
@@ -42,15 +48,30 @@ export default function PaymentSuccessPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <h1 className="font-display text-3xl font-bold text-gray-900 mb-2">
-          Order Placed! 🎉
+        <h1 className="font-display text-3xl font-bold text-gray-900 mb-3">
+          {orderNumbers.length > 1 ? "Orders Placed! 🎉" : "Order Placed! 🎉"}
         </h1>
-        {orderNumber && (
+
+        {orderNumbers.length === 1 && (
           <p className="text-gray-500 mb-1">
             Order Number:{" "}
-            <span className="font-bold text-primary">{orderNumber}</span>
+            <span className="font-bold text-primary font-mono">
+              {orderNumbers[0]}
+            </span>
           </p>
         )}
+
+        {orderNumbers.length > 1 && (
+          <div className="space-y-1 mb-3">
+            {orderNumbers.map((num, i) => (
+              <p key={i} className="text-gray-500 text-sm">
+                Order {i + 1}:{" "}
+                <span className="font-bold text-primary font-mono">{num}</span>
+              </p>
+            ))}
+          </div>
+        )}
+
         <p className="text-gray-500 text-sm max-w-sm">
           Thank you for your order! You will receive a confirmation notification
           shortly.
@@ -59,7 +80,7 @@ export default function PaymentSuccessPage() {
 
       <div className="flex flex-col sm:flex-row gap-3 mt-2">
         <Link href="/account/orders" className="btn-primary px-8 py-3">
-          Track My Order
+          Track My Order{orderNumbers.length > 1 ? "s" : ""}
         </Link>
         <Link href="/products" className="btn-secondary px-8 py-3">
           Continue Shopping

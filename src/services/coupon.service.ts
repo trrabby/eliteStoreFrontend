@@ -64,6 +64,14 @@ export const getCouponById = async (id: number) => {
   }
 };
 
+export const getCouponEligibility = async (couponCode: string) => {
+  try {
+    return await fetchWithAuth(`/coupons/coupon-eligibility/${couponCode}`);
+  } catch (error: any) {
+    return Error(error);
+  }
+};
+
 export const createCoupon = async (formData: FormData) => {
   try {
     return await fetchWithAuth("/coupons/create", {

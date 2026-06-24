@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/lib/hooks/useCart";
 import { formatBDT } from "@/lib/utils/currency";
@@ -36,12 +36,27 @@ export function CartItem({ item }: Props) {
           className="object-cover"
           sizes="80px"
         />
+
+        {/* Flash sale badge */}
+        {item.flashSaleLabel && (
+          <div
+            className="absolute top-0 left-0 bg-orange-500 text-white
+                          text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg
+                          flex items-center gap-0.5"
+          >
+            <Zap size={8} className="fill-white" />
+            {item.flashSaleLabel}
+          </div>
+        )}
       </Link>
 
       {/* Details */}
       <div className="flex-1 min-w-0">
         <Link href={`/products/${item.productSlug}`}>
-          <h4 className="text-sm font-semibold text-gray-900 line-clamp-1 hover:text-primary transition-colors">
+          <h4
+            className="text-sm font-semibold text-gray-900 line-clamp-1
+                         hover:text-primary transition-colors"
+          >
             {item.productName}
           </h4>
         </Link>
@@ -50,16 +65,41 @@ export function CartItem({ item }: Props) {
           <p className="text-xs text-gray-500 mt-0.5">{item.variantName}</p>
         )}
 
-        <div className="flex items-center gap-2 mt-1.5">
+        {/* Price row */}
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          {/* Sale price (final) */}
           <span className="text-sm font-bold text-primary">
-            {formatBDT(item.price * item.quantity)}
+            {formatBDT(item.salePrice * item.quantity)}
           </span>
-          {item.comparePrice && item.comparePrice > item.price && (
+
+          {/* Original sticker price crossed out */}
+          {item.hasDiscount && (
             <span className="text-xs text-gray-400 line-through">
-              {formatBDT(item.comparePrice * item.quantity)}
+              {formatBDT(item.basePrice * item.quantity)}
+            </span>
+          )}
+
+          {/* Discount percent badge */}
+          {item.totalDiscountPercent > 0 && (
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full
+                              ${
+                                item.flashSaleLabel
+                                  ? "bg-orange-100 text-orange-600"
+                                  : "bg-green-100 text-green-600"
+                              }`}
+            >
+              -{item.totalDiscountPercent}%
             </span>
           )}
         </div>
+
+        {/* Per-unit price if qty > 1 */}
+        {item.quantity > 1 && item.salePrice !== item.basePrice && (
+          <p className="text-[10px] text-gray-400 mt-0.5">
+            {formatBDT(item.salePrice)} each
+          </p>
+        )}
 
         {/* Qty controls */}
         <div className="flex items-center justify-between mt-2">

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/immutability */
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client";
@@ -22,11 +23,12 @@ import {
   Truck,
   CreditCard,
   Store,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppSelector, useAppDispatch } from "@/store/hook";
 import { selectCurrentUser } from "@/store/slices/authSlice";
-
 import {
   selectCheckout,
   setAddress,
@@ -34,48 +36,40 @@ import {
   removeCoupon,
   setNotes,
 } from "@/store/slices/checkoutSlice";
-
 import { useCartDisplay } from "@/lib/hooks/useCartDisplay";
-import { applyCoupon } from "@/services/coupon.service";
+import { getCouponEligibility } from "@/services/coupon.service";
 import { getMyAddresses } from "@/services/user.service";
 import { CheckoutProgress } from "@/components/checkout/CheckoutProgress";
 import { MagneticButton } from "@/components/shared/MagneticButton";
+import { AddressFormModal } from "@/components/checkout/AddressFormModal";
 import { formatBDT } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils/cn";
-import type { IAddress } from "@/types/user.types";
-import { AddressFormModal } from "@/components/checkout/AddressFormModal";
 import { computeVendorShipping } from "@/lib/utils/cart";
 import { getBaseShippingRate } from "@/lib/utils/shipping";
+import type { IAddress } from "@/types/user.types";
+
+const FREE_SHIPPING_THRESHOLD = 4000;
 
 const getAddressIcon = (type?: string) => {
   switch (type?.toLowerCase()) {
     case "home":
       return <Home size={16} />;
     case "office":
-    case "work":
       return <Building size={16} />;
     default:
       return <Package size={16} />;
   }
 };
 
-// Free shipping threshold (total order subtotal)
-const FREE_SHIPPING_THRESHOLD = 4000;
-
 export default function CheckoutAddressPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectCurrentUser);
   const checkout = useAppSelector(selectCheckout);
-  const defaultAddress = user?.defaultAddress;
 
-  // Cart data for shipping calculation
   const { displayItems, subtotal } = useCartDisplay();
-
-  // Compute base shipping rate from the default address (if logged in)
+  const defaultAddress = user?.defaultAddress;
   const baseRate = user ? getBaseShippingRate(defaultAddress) : 130;
-
-  // Compute vendor-wise shipping
   const { totalShipping, vendorCount } = computeVendorShipping(
     displayItems,
     baseRate,
@@ -89,12 +83,13 @@ export default function CheckoutAddressPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
 
-  // Coupon state
+  /* ── Coupon ── */
   const [couponInput, setCouponInput] = useState("");
   const [applying, setApplying] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [eligibility, setEligibility] = useState<any | null>(null);
 
-  // Notes state
+  /* ── Notes ── */
   const [notes, setNotesState] = useState(checkout.notes ?? "");
 
   useEffect(() => {
@@ -119,47 +114,48 @@ export default function CheckoutAddressPage() {
     setLoading(false);
   };
 
+  /* ── Coupon eligibility check ── */
   const handleApplyCoupon = async () => {
-    if (!couponInput.trim()) {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) {
       toast.error("Please enter a coupon code");
       return;
     }
 
     setApplying(true);
     try {
-      const fd = new FormData();
-      fd.append(
-        "data",
-        JSON.stringify({
-          code: couponInput.trim().toUpperCase(),
-          orderAmount: Number(subtotal) || 0,
-        }),
-      );
-
-      const res = await applyCoupon(fd);
+      const res = await getCouponEligibility(code);
 
       if (!res?.success) {
-        toast.error(res?.message ?? "Invalid or expired coupon.");
+        toast.error((res as any)?.message ?? "Invalid or expired coupon.");
         setCouponInput("");
         return;
       }
 
-      const discountAmount =
-        Number(res.data?.discountAmount) || Number(res.data?.discount) || 0;
+      const data = res.data;
 
+      if (!data?.eligible) {
+        toast.error(data?.message ?? "You are not eligible for this coupon.");
+        setCouponInput("");
+        return;
+      }
+
+      setEligibility(data);
       dispatch(
         applyCouponSuccess({
-          code: couponInput.trim().toUpperCase(),
-          discount: discountAmount,
-          couponId: res.data?.couponId || res.data?.id,
+          code,
+          discount: Number(data.totalDiscount) || 0,
+          // couponId unknown at this stage — resolved on order creation
         }),
       );
 
-      toast.success(`Coupon applied! You save ${formatBDT(discountAmount)}`);
+      toast.success(
+        data.message ||
+          `Coupon applied! You save ${formatBDT(data.totalDiscount)}`,
+      );
       setCouponInput("");
-    } catch (error) {
-      console.error("Coupon error:", error);
-      toast.error("Failed to apply coupon.");
+    } catch {
+      toast.error("Failed to check coupon eligibility.");
     } finally {
       setApplying(false);
     }
@@ -167,14 +163,13 @@ export default function CheckoutAddressPage() {
 
   const handleRemoveCoupon = () => {
     dispatch(removeCoupon());
+    setEligibility(null);
     toast.info("Coupon removed");
   };
 
   const handleSaveNotes = () => {
     dispatch(setNotes(notes));
-    if (notes) {
-      toast.success("Notes saved");
-    }
+    if (notes) toast.success("Notes saved");
   };
 
   const handleContinue = () => {
@@ -182,12 +177,8 @@ export default function CheckoutAddressPage() {
       toast.error("Please select a delivery address.");
       return;
     }
-
-    // Save address to store
     dispatch(setAddress(selectedAddressId));
-    // Save notes
     dispatch(setNotes(notes));
-
     router.push("/checkout/review");
   };
 
@@ -203,7 +194,7 @@ export default function CheckoutAddressPage() {
         <CheckoutProgress />
 
         <div className="space-y-5">
-          {/* Address Selection Section */}
+          {/* ── Address Section ── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -221,10 +212,10 @@ export default function CheckoutAddressPage() {
                 </div>
                 <button
                   onClick={() => setShowModal(true)}
-                  className="flex items-center gap-1.5 rounded-xl bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary transition-all hover:bg-primary/20"
+                  className="flex items-center gap-1.5 rounded-xl bg-primary/10
+                             px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20 transition-all"
                 >
-                  <Plus size={14} />
-                  Add New
+                  <Plus size={14} /> Add New
                 </button>
               </div>
               <p className="mt-1 text-xs text-gray-500">
@@ -236,48 +227,46 @@ export default function CheckoutAddressPage() {
               {loading ? (
                 <div className="space-y-3">
                   {[1, 2].map((i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-32 rounded-2xl bg-gray-100" />
-                    </div>
+                    <div
+                      key={i}
+                      className="animate-pulse h-32 rounded-2xl bg-gray-100"
+                    />
                   ))}
                 </div>
               ) : addresses.length === 0 ? (
-                <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-8 text-center">
-                  <div className="mb-4 rounded-full bg-primary/10 p-3">
-                    <MapPin
-                      size={40}
-                      className="text-primary"
-                      strokeWidth={1.5}
-                    />
-                  </div>
-                  <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                <div
+                  className="flex min-h-[200px] flex-col items-center justify-center
+                                rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center"
+                >
+                  <MapPin
+                    size={40}
+                    className="text-primary/30 mb-4"
+                    strokeWidth={1.5}
+                  />
+                  <h3 className="mb-2 font-semibold text-gray-900">
                     No addresses yet
                   </h3>
-                  <p className="mb-6 text-sm text-gray-500">
-                    Add your first address to continue
-                  </p>
                   <button
                     onClick={() => setShowModal(true)}
-                    className="btn-primary flex items-center gap-2 px-6 py-2.5 text-sm"
+                    className="btn-primary px-6 py-2.5 text-sm mt-3"
                   >
-                    <Plus size={16} />
+                    <Plus size={16} className="inline mr-1" />
                     Add Address
                   </button>
                 </div>
               ) : (
-                <div className="mb-6 grid grid-cols-1 gap-3">
-                  {addresses.map((addr, index) => (
+                <div className="mb-2 grid grid-cols-1 gap-3">
+                  {addresses.map((addr, i) => (
                     <motion.button
                       key={addr.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      whileTap={{ scale: 0.99 }}
+                      transition={{ delay: i * 0.05 }}
                       onClick={() => setSelectedAddressId(addr.id)}
                       className={cn(
-                        "group relative w-full overflow-hidden rounded-2xl border-2 p-4 text-left transition-all duration-200",
+                        "group relative w-full overflow-hidden rounded-2xl border-2 p-4 text-left transition-all",
                         selectedAddressId === addr.id
-                          ? "border-primary/50 bg-primary/5 shadow-md shadow-primary/10"
+                          ? "border-primary/50 bg-primary/5 shadow-md"
                           : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm",
                       )}
                     >
@@ -286,7 +275,7 @@ export default function CheckoutAddressPage() {
                           "absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all",
                           selectedAddressId === addr.id
                             ? "border-primary bg-primary"
-                            : "border-gray-300 bg-white",
+                            : "border-gray-300",
                         )}
                       >
                         {selectedAddressId === addr.id && (
@@ -294,68 +283,44 @@ export default function CheckoutAddressPage() {
                         )}
                       </div>
 
-                      <div className="pr-6">
-                        <div className="mb-3 flex items-start gap-3">
-                          <div
-                            className={cn(
-                              "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
-                              selectedAddressId === addr.id
-                                ? "bg-gradient-to-br from-primary to-primary/80 text-white shadow-sm"
-                                : "bg-gray-100 text-gray-600 group-hover:bg-gray-200",
-                            )}
-                          >
-                            {getAddressIcon(addr.type)}
-                          </div>
-                          <div className="flex-1">
-                            <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                              <span className="text-sm font-semibold text-gray-900">
-                                {addr.fullName}
-                              </span>
-                              {addr.isDefault && (
-                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                                  Default
-                                </span>
-                              )}
-                              {addr.label && (
-                                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                                  {addr.label}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-400 capitalize">
-                              {addr.type?.toLowerCase() || "Other"}
-                            </p>
-                          </div>
+                      <div className="flex items-start gap-3 pr-6">
+                        <div
+                          className={cn(
+                            "flex h-10 w-10 items-center justify-center rounded-xl transition-all",
+                            selectedAddressId === addr.id
+                              ? "bg-gradient-to-br from-primary to-primary/80 text-white"
+                              : "bg-gray-100 text-gray-600",
+                          )}
+                        >
+                          {getAddressIcon(addr.type)}
                         </div>
-
-                        <div className="mb-3 space-y-1.5 border-l-2 border-gray-100 pl-3">
-                          <div className="flex items-start gap-2">
-                            <MapPin
-                              size={12}
-                              className="mt-0.5 flex-shrink-0 text-gray-400"
-                            />
-                            <div>
-                              <p className="text-sm leading-relaxed text-gray-700">
-                                {addr.addressLine1}
-                                {addr.addressLine2 && `, ${addr.addressLine2}`}
-                              </p>
-                              <p className="mt-0.5 text-xs text-gray-500">
-                                {addr.city_district}, {addr.country}
-                                {addr.postalCode && ` - ${addr.postalCode}`}
-                              </p>
-                              {addr.landmark && (
-                                <p className="mt-0.5 text-xs text-gray-400">
-                                  📍 Near {addr.landmark}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="text-gray-400">📞</span>
-                            <span className="text-sm font-medium text-gray-700">
-                              {addr.phone}
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <span className="text-sm font-semibold text-gray-900">
+                              {addr.fullName}
                             </span>
+                            {addr.isDefault && (
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                Default
+                              </span>
+                            )}
+                            {addr.label && (
+                              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                                {addr.label}
+                              </span>
+                            )}
                           </div>
+                          <p className="text-sm text-gray-700">
+                            {addr.addressLine1}
+                            {addr.addressLine2 && `, ${addr.addressLine2}`}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {addr.city_district}, {addr.country}
+                            {addr.postalCode && ` - ${addr.postalCode}`}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            📞 {addr.phone}
+                          </p>
                         </div>
                       </div>
                     </motion.button>
@@ -365,7 +330,7 @@ export default function CheckoutAddressPage() {
             </div>
           </motion.div>
 
-          {/* Coupon Section */}
+          {/* ── Coupon Section ── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -378,48 +343,92 @@ export default function CheckoutAddressPage() {
                   <Tag size={18} className="text-amber-600" />
                 </div>
                 <h3 className="font-display text-lg font-bold text-gray-900">
-                  Apply Promo Code
+                  Promo Code
                 </h3>
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                Save more with exclusive coupons
+                Eligible coupons are verified against your cart
               </p>
             </div>
 
             <div className="p-6">
               <AnimatePresence mode="wait">
                 {checkout.couponCode ? (
+                  /* ── Applied coupon ── */
                   <motion.div
+                    key="applied"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 p-4"
+                    className="space-y-3"
                   >
-                    <div className="absolute right-0 top-0 opacity-10">
-                      <Gift size={80} />
-                    </div>
-                    <div className="relative flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <Sparkles size={16} className="text-green-600" />
-                          <p className="text-sm font-bold text-green-700 uppercase">
-                            {checkout.couponCode}
+                    {/* Applied banner */}
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 p-4">
+                      <div className="absolute right-0 top-0 opacity-10">
+                        <Gift size={80} />
+                      </div>
+                      <div className="relative flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Sparkles size={16} className="text-green-600" />
+                            <p className="text-sm font-bold text-green-700 uppercase">
+                              {checkout.couponCode}
+                            </p>
+                          </div>
+                          <p className="mt-1 text-xs text-green-600">
+                            You save {formatBDT(checkout.couponDiscount)}
                           </p>
                         </div>
-                        <p className="mt-1 text-xs text-green-600">
-                          You save {formatBDT(discount)}
-                        </p>
+                        <button
+                          onClick={handleRemoveCoupon}
+                          className="rounded-lg p-2 text-red-400 hover:bg-red-50 hover:text-red-600 transition-all"
+                        >
+                          <X size={16} />
+                        </button>
                       </div>
-                      <button
-                        onClick={handleRemoveCoupon}
-                        className="rounded-lg p-2 text-red-400 transition-all hover:bg-red-50 hover:text-red-600"
-                      >
-                        <X size={16} />
-                      </button>
                     </div>
+
+                    {/* Vendor-level breakdown */}
+                    {eligibility?.details && eligibility.details.length > 1 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-gray-500">
+                          Discount breakdown by vendor:
+                        </p>
+                        {eligibility.details.map(
+                          (d: any, i: number) =>
+                            d.couponDiscount > 0 && (
+                              <div
+                                key={i}
+                                className="flex items-center justify-between
+                                                     bg-gray-50 rounded-xl px-3 py-2 text-xs"
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <Store size={12} className="text-primary" />
+                                  <span className="text-gray-700 font-medium">
+                                    {d.vendorName ?? "Store"}
+                                  </span>
+                                </div>
+                                <span className="text-green-600 font-semibold">
+                                  -{formatBDT(d.couponDiscount)}
+                                </span>
+                              </div>
+                            ),
+                        )}
+                      </div>
+                    )}
+
+                    {/* Scope notice for vendor coupon */}
+                    {eligibility?.details?.[0]?.note?.includes("vendor") && (
+                      <div className="flex items-start gap-2 bg-blue-50 rounded-xl px-3 py-2 text-xs text-blue-700">
+                        <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                        <span>{eligibility.details[0].note}</span>
+                      </div>
+                    )}
                   </motion.div>
                 ) : (
+                  /* ── Input ── */
                   <motion.div
+                    key="input"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -439,7 +448,8 @@ export default function CheckoutAddressPage() {
                           }
                           placeholder="Enter coupon code"
                           className={cn(
-                            "w-full rounded-xl border-2 px-4 py-3 text-sm outline-none transition-all uppercase tracking-wider",
+                            "w-full rounded-xl border-2 px-4 py-3 text-sm outline-none transition-all",
+                            "uppercase tracking-wider",
                             focused
                               ? "border-primary/50 bg-white shadow-md"
                               : "border-gray-200 bg-gray-50/50 hover:border-gray-300",
@@ -462,12 +472,12 @@ export default function CheckoutAddressPage() {
                         {applying ? (
                           <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                         ) : (
-                          "Apply"
+                          "Check"
                         )}
                       </button>
                     </div>
                     <p className="text-xs text-gray-400">
-                      🎁 Enter a valid coupon code to get instant discount
+                      🎁 Eligibility is checked against your actual cart items
                     </p>
                   </motion.div>
                 )}
@@ -475,7 +485,7 @@ export default function CheckoutAddressPage() {
             </div>
           </motion.div>
 
-          {/* Order Notes Section */}
+          {/* ── Notes Section ── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -491,27 +501,21 @@ export default function CheckoutAddressPage() {
                   Order Notes (Optional)
                 </h3>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Any special instructions for delivery?
-              </p>
             </div>
-
             <div className="p-6">
               <textarea
                 value={notes}
                 onChange={(e) => setNotesState(e.target.value)}
                 onBlur={handleSaveNotes}
-                placeholder="e.g., Leave at the front door, Call before delivery, etc."
+                placeholder="e.g., Leave at the front door, Call before delivery..."
                 rows={3}
-                className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm outline-none transition-all focus:border-primary/50 focus:bg-white focus:shadow-md"
+                className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm outline-none
+                           resize-none transition-all focus:border-primary/50 focus:shadow-md"
               />
-              <p className="mt-2 text-xs text-gray-400">
-                💡 You can add delivery instructions here
-              </p>
             </div>
           </motion.div>
 
-          {/* Order Summary Preview */}
+          {/* ── Order Summary ── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -528,19 +532,13 @@ export default function CheckoutAddressPage() {
                 </h3>
               </div>
             </div>
-
             <div className="p-6">
-              {/* Vendor count notice */}
               {vendorCount > 1 && (
                 <div className="mb-4 flex items-center gap-2 rounded-xl bg-blue-50 p-2.5 text-xs text-blue-700">
-                  <Store size={14} className="flex-shrink-0" />
-                  <span>
-                    Items from {vendorCount} vendors – shipping charges applied
-                    per vendor.
-                  </span>
+                  <Store size={14} className="shrink-0" />
+                  Items from {vendorCount} vendors — shipping applied per vendor
                 </div>
               )}
-
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
@@ -548,22 +546,20 @@ export default function CheckoutAddressPage() {
                     {formatBDT(subtotalAmount)}
                   </span>
                 </div>
-
                 {discount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <div className="flex items-center gap-1">
                       <Sparkles size={14} />
-                      <span>Coupon discount</span>
+                      <span>Coupon</span>
                     </div>
                     <span className="font-medium">-{formatBDT(discount)}</span>
                   </div>
                 )}
-
                 <div className="flex justify-between text-gray-600">
                   <span>Delivery Charge</span>
                   {totalShipping === 0 ? (
-                    <span className="font-medium text-green-600 flex items-center gap-1">
-                      FREE
+                    <span className="text-green-600 font-medium flex items-center gap-1">
+                      <CheckCircle2 size={13} /> FREE
                     </span>
                   ) : (
                     <span className="font-medium">
@@ -571,8 +567,7 @@ export default function CheckoutAddressPage() {
                     </span>
                   )}
                 </div>
-
-                <div className="mt-4 flex justify-between border-t border-gray-100 pt-4">
+                <div className="flex justify-between border-t border-gray-100 pt-4 mt-4">
                   <span className="text-base font-bold text-gray-900">
                     Total Amount
                   </span>
@@ -584,52 +579,42 @@ export default function CheckoutAddressPage() {
             </div>
           </motion.div>
 
-          {/* Trust Badges */}
+          {/* ── Trust badges ── */}
           <div className="flex items-center justify-center gap-4 rounded-2xl bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-2">
-              <Shield size={16} className="text-green-600" />
-              <span className="text-xs text-gray-600">Secure Transaction</span>
-            </div>
-            <div className="h-4 w-px bg-gray-200" />
-            <div className="flex items-center gap-2">
-              <Truck size={16} className="text-primary" />
-              <span className="text-xs text-gray-600">Fast Delivery</span>
-            </div>
-            <div className="h-4 w-px bg-gray-200" />
-            <div className="flex items-center gap-2">
-              <Package size={16} className="text-blue-600" />
-              <span className="text-xs text-gray-600">Easy Returns</span>
-            </div>
+            {[
+              {
+                icon: Shield,
+                label: "Secure Transaction",
+                color: "text-green-600",
+              },
+              { icon: Truck, label: "Fast Delivery", color: "text-primary" },
+              { icon: Package, label: "Easy Returns", color: "text-blue-600" },
+            ].map(({ icon: Icon, label, color }) => (
+              <div key={label} className="flex items-center gap-2">
+                <Icon size={16} className={color} />
+                <span className="text-xs text-gray-600">{label}</span>
+              </div>
+            ))}
           </div>
 
-          {/* Continue Button */}
+          {/* ── Continue button ── */}
           <div className="pt-2">
             <MagneticButton
               onClick={handleContinue}
               disabled={!selectedAddressId}
               strength={0.25}
               className={cn(
-                "w-full py-3.5 flex items-center justify-center gap-2 transition-all duration-200",
+                "w-full py-3.5 flex items-center justify-center gap-2",
                 "btn-primary disabled:opacity-60 disabled:cursor-not-allowed",
               )}
             >
               <span>Review Order</span>
-              <ChevronRight
-                size={16}
-                className="transition-transform group-hover:translate-x-0.5"
-              />
+              <ChevronRight size={16} />
             </MagneticButton>
-
-            {!selectedAddressId && addresses.length > 0 && (
-              <p className="mt-3 text-center text-xs text-amber-600">
-                Please select an address to continue
-              </p>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Address Form Modal */}
       {showModal && (
         <AddressFormModal
           onClose={() => setShowModal(false)}

@@ -7,7 +7,7 @@ import { fetchWithAuth } from "./helpers";
 // place order from cart
 export const createOrder = async (formData: FormData) => {
   try {
-    return await fetchWithAuth("/createOrder", {
+    return await fetchWithAuth("/orders/createOrder", {
       method: "POST",
       headers: {},
       body: formData,
