@@ -23,7 +23,8 @@ export default function ReturnsPage() {
   useEffect(() => {
     const load = async () => {
       const res = await getMyReturnRequests({ limit: 20 });
-      if (res?.success) setReturns(res.data ?? []);
+      // console.log(res);
+      if (res?.success) setReturns(res.data.requests ?? []);
       setLoading(false);
     };
     load();
@@ -51,7 +52,7 @@ export default function ReturnsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {returns.map((req, i) => (
+          {returns?.map((req, i) => (
             <motion.div
               key={req.id}
               initial={{ opacity: 0, y: 10 }}

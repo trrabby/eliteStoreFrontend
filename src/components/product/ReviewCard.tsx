@@ -20,7 +20,7 @@ import { timeAgo } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { voteReview } from "@/services/review.service";
-import { WriteReviewModal } from "@/components/review/WriteReviewModal";
+import { WriteReviewModal } from "@/components/modals/WriteReviewModal";
 
 type ReviewCardProps = {
   review: {

@@ -7,7 +7,7 @@ import { fetchWithAuth } from "./helpers";
 // submit return request — customer
 export const createReturnRequest = async (formData: FormData) => {
   try {
-    return await fetchWithAuth("/returns", {
+    return await fetchWithAuth("/return-requests/create", {
       method: "POST",
       headers: {},
       body: formData,
@@ -24,7 +24,9 @@ export const getMyReturnRequests = async (params: {
   status?: string;
 }) => {
   try {
-    return await fetchWithAuth(`/returns/my-requests${buildQuery(params)}`);
+    return await fetchWithAuth(
+      `/return-requests/my-requests${buildQuery(params)}`,
+    );
   } catch (error: any) {
     return Error(error);
   }
@@ -33,7 +35,7 @@ export const getMyReturnRequests = async (params: {
 // single return request
 export const getReturnRequestById = async (id: number) => {
   try {
-    return await fetchWithAuth(`/returns/${id}`);
+    return await fetchWithAuth(`/return-requests/${id}`);
   } catch (error: any) {
     return Error(error);
   }
@@ -42,7 +44,7 @@ export const getReturnRequestById = async (id: number) => {
 // cancel return request — customer
 export const cancelReturnRequest = async (id: number) => {
   try {
-    return await fetchWithAuth(`/returns/${id}/cancel`, {
+    return await fetchWithAuth(`/return-requests/${id}/cancel`, {
       method: "PATCH",
     });
   } catch (error: any) {
@@ -54,7 +56,7 @@ export const cancelReturnRequest = async (id: number) => {
 
 export const getReturnStats = async () => {
   try {
-    return await fetchWithAuth("/returns/stats/overview");
+    return await fetchWithAuth("/return-requests/stats/overview");
   } catch (error: any) {
     return Error(error);
   }
@@ -70,7 +72,7 @@ export const getAllReturnRequests = async (params: {
   dateTo?: string;
 }) => {
   try {
-    return await fetchWithAuth(`/returns${buildQuery(params)}`);
+    return await fetchWithAuth(`/return-requests${buildQuery(params)}`);
   } catch (error: any) {
     return Error(error);
   }
@@ -79,7 +81,7 @@ export const getAllReturnRequests = async (params: {
 // approve or reject return — triggers all cascades
 export const processReturn = async (id: number, formData: FormData) => {
   try {
-    return await fetchWithAuth(`/returns/${id}/process`, {
+    return await fetchWithAuth(`/return-requests/${id}/process`, {
       method: "PATCH",
       headers: {},
       body: formData,
@@ -92,7 +94,7 @@ export const processReturn = async (id: number, formData: FormData) => {
 // manual status update — admin
 export const updateReturnStatus = async (id: number, formData: FormData) => {
   try {
-    return await fetchWithAuth(`/returns/${id}/status`, {
+    return await fetchWithAuth(`/return-requests/${id}/status`, {
       method: "PATCH",
       headers: {},
       body: formData,

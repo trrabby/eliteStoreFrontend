@@ -14,7 +14,7 @@ import { useAppSelector } from "@/store/hook";
 import { selectCurrentUser } from "@/store/slices/authSlice";
 import { cn } from "@/lib/utils/cn";
 import { AnimatePresence } from "framer-motion";
-import { WriteReviewModal } from "../review/WriteReviewModal";
+import { WriteReviewModal } from "../modals/WriteReviewModal";
 
 type ReviewSectionProps = {
   productId: number;
