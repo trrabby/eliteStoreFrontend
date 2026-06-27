@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
@@ -17,7 +18,7 @@ import { Logo } from "@/components/shared/Logo";
 import { NotificationBell } from "@/components/shared/NotificationBell";
 import { SearchBar } from "@/components/shared/SearchBar";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CartDrawer } from "../cart/CartDrawer";
 import Image from "next/image";
 import { useAppSelector } from "@/store/hook";
@@ -33,16 +34,31 @@ import { setNotifications } from "@/store/slices/notificationSlice";
 import { setWishlist } from "@/store/slices/wishlistSlice";
 import { addToCart as addToCartAPI } from "@/services/cart.service";
 import { setItemsFromDB, startSync, syncDone } from "@/store/slices/cartSlice";
+import { getCurrentUser } from "@/services/auth.service";
+import { useLogout } from "@/lib/hooks/useLogout";
 
 export function Header() {
   const dispatch = useDispatch();
   const pathname = usePathname();
+  const logout = useLogout();
   const [mounted, setMounted] = useState(false);
   const cart = useSelector((state: RootState) => state.cart);
   const isSearchOpen = useSelector((state: RootState) => state.ui.isSearchOpen);
   const { data: session, status } = useSession();
-
+  const user = useAppSelector(selectCurrentUser);
   const totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+
+  useEffect(() => {
+    const chkUserAndAccesstoken = async () => {
+      const currentUserTokenDecoded = await getCurrentUser();
+      // console.log(currentUserTokenDecoded);
+      if (user && !currentUserTokenDecoded) {
+        await logout();
+        toast.error("Session Expired. Please Login");
+      }
+    };
+    chkUserAndAccesstoken();
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -161,8 +177,6 @@ export function Header() {
 
     syncReduxUser();
   }, [session, status, dispatch]);
-
-  const user = useAppSelector(selectCurrentUser);
 
   return (
     <>

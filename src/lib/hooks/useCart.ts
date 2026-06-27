@@ -19,17 +19,19 @@ import {
   getCart,
 } from "@/services/cart.service";
 import { toast } from "sonner";
+import { useUsers } from "./useUser";
 
 export function useCart() {
   const dispatch = useDispatch();
   const user = useAppSelector(selectCurrentUser);
+  const { userAndNoAccesstoken } = useUsers();
   const { items, itemCount, isSyncing } = useSelector((s: RootState) => s.cart);
 
   /* ─── Fetch cart from DB and sync local state ─── */
   const fetchCart = async () => {
     if (!user) return;
     const res = await getCart();
-    console.log(res);
+    // console.log(res);
     if (res?.success && Array.isArray(res.data?.items)) {
       dispatch(setItemsFromDB(res.data.items));
     }
@@ -46,17 +48,19 @@ export function useCart() {
 
     if (!user) return { success: true, guest: true };
 
-    // Auth: sync to DB
-    const fd = new FormData();
-    fd.append("data", JSON.stringify({ variantId, productId, quantity }));
-    const res = await addToCartAPI(fd);
+    if (!userAndNoAccesstoken) {
+      // Auth: sync to DB
+      const fd = new FormData();
+      fd.append("data", JSON.stringify({ variantId, productId, quantity }));
+      const res = await addToCartAPI(fd);
 
-    if (!res?.success) {
-      // Rollback local if API failed
-      dispatch(removeItem(variantId));
-      toast.error(res?.message ?? "Failed to add to cart");
+      if (!res?.success) {
+        // Rollback local if API failed
+        dispatch(removeItem(variantId));
+        toast.error(res?.message ?? "Failed to add to cart");
+      }
+      return res;
     }
-    return res;
   };
 
   /* ─── Remove from cart ─── */
@@ -64,9 +68,11 @@ export function useCart() {
     dispatch(removeItem(variantId));
     if (!user) return;
 
-    const res = await removeCartItem(variantId);
-    if (!res?.success) {
-      toast.error("Failed to remove item");
+    if (!userAndNoAccesstoken) {
+      const res = await removeCartItem(variantId);
+      if (!res?.success) {
+        toast.error("Failed to remove item");
+      }
     }
   };
 

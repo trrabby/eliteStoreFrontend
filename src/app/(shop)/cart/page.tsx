@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Trash2, RefreshCw, LogIn, Store } from "lucide-react";
-import { useSelector } from "react-redux";
 import { useCart } from "@/lib/hooks/useCart";
 import { useCartDisplay } from "@/lib/hooks/useCartDisplay";
 import { useAppSelector } from "@/store/hook";
@@ -18,13 +17,14 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { computeVendorShipping } from "@/lib/utils/cart";
 import { getBaseShippingRate } from "@/lib/utils/shipping";
 import dynamic from "next/dynamic";
+import { useUsers } from "@/lib/hooks/useUser";
 
 const Player = dynamic(
   () => import("@lottiefiles/react-lottie-player").then((m) => m.Player),
   { ssr: false },
 );
 
-const FREE_SHIPPING_THRESHOLD = 4000;
+const FREE_SHIPPING_THRESHOLD = 2000;
 
 export default function CartPage() {
   const router = useRouter();
@@ -32,6 +32,8 @@ export default function CartPage() {
   const defaultAddress = user?.defaultAddress;
   const { itemCount, clearCart, fetchCart } = useCart();
   const { displayItems, loading, subtotal, savings } = useCartDisplay();
+  const { userAndNoAccesstoken } = useUsers();
+  // console.log(userAndNoAccesstoken);
 
   const baseRate = user ? getBaseShippingRate(defaultAddress) : 130;
   const { totalShipping, vendorCount } = computeVendorShipping(
@@ -264,7 +266,7 @@ export default function CartPage() {
               </div>
             </div>
 
-            {user ? (
+            {user && !userAndNoAccesstoken ? (
               <MagneticButton
                 strength={0.25}
                 onClick={() => router.push("/checkout")}

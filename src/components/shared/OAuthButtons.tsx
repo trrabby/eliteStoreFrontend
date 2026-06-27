@@ -6,10 +6,10 @@ import { toast } from "sonner";
 import { signIn } from "next-auth/react";
 
 type OAuthButtonsProps = {
-  redirect?: string;
+  redirect?: string | null;
 };
 
-export function OAuthButtons({ redirect = "/" }: OAuthButtonsProps) {
+export function OAuthButtons({ redirect }: OAuthButtonsProps) {
   const [loading, setLoading] = useState<"google" | "github" | null>(null);
 
   // In a real implementation this would open OAuth popup

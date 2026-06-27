@@ -27,9 +27,10 @@ import {
 import { motion } from "framer-motion";
 import { useAppSelector } from "@/store/hook";
 import { selectCurrentUser } from "@/store/slices/authSlice";
-import { toast } from "sonner";
 import Image from "next/image";
 import { useLogout } from "@/lib/hooks/useLogout";
+import { useUsers } from "@/lib/hooks/useUser";
+import { toast } from "sonner";
 
 const ACCOUNT_NAV = [
   { icon: User, label: "My Profile", href: "/account" },
@@ -50,17 +51,17 @@ function AccountNav({
   onNavigate?: () => void;
 }) {
   const logout = useLogout();
-  const router = useRouter();
   const user = useAppSelector(selectCurrentUser);
+  const { userAndNoAccesstoken } = useUsers();
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      router.push("/login");
-    } catch {
-      toast.error("Something went wrong");
-    }
+    await logout();
   };
+
+  if (userAndNoAccesstoken) {
+    handleLogout();
+    toast.error("Session Expired. Please Login");
+  }
 
   const initials = `${user?.accountInfo?.firstName?.[0] ?? ""}${
     user?.accountInfo?.lastName?.[0] ?? ""

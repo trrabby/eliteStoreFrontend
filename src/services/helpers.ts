@@ -128,7 +128,7 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   if (!accessToken) {
     return {
       success: false,
-      message: "Please log in again",
+      message: "Session Expired. Please login",
     };
   }
 
@@ -141,75 +141,6 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
 
   return data;
 };
-
-// export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-//   const isFormData = options.body instanceof FormData;
-
-//   const headers: Record<string, string> = {
-//     ...(!isFormData && { "Content-Type": "application/json" }),
-//     ...(options.headers as Record<string, string>),
-//   };
-
-//   // FIRST REQUEST
-//   let res = await fetch(`${config().Backend_URL}${url}`, {
-//     ...options,
-//     headers,
-//     credentials: "include", // CRITICAL
-//     cache: "no-store",
-//   });
-
-//   // ─────────────────────────────
-//   // REFRESH FLOW (COOKIE BASED)
-//   // ─────────────────────────────
-//   if (res.status === 401) {
-//     let errorData: any = null;
-
-//     try {
-//       errorData = await res.clone().json();
-//     } catch {}
-
-//     const isExpired = errorData?.code === "TOKEN_EXPIRED";
-
-//     if (isExpired) {
-//       // refresh call (cookies automatically sent)
-//       const refreshRes = await fetch(
-//         `${config().Backend_URL}/auth/refresh-token`,
-//         {
-//           method: "POST",
-//           credentials: "include",
-//         },
-//       );
-
-//       const refreshData = await refreshRes.json();
-
-//       if (!refreshData?.success) {
-//         return {
-//           success: false,
-//           message: "Session expired",
-//         };
-//       }
-
-//       // retry original request
-//       res = await fetch(`${config().Backend_URL}${url}`, {
-//         ...options,
-//         headers,
-//         credentials: "include",
-//         cache: "no-store",
-//       });
-//     } else {
-//       return {
-//         success: false,
-//         message: "Unauthorized access",
-//       };
-//     }
-//   }
-
-//   return res.json();
-// };
-
-// ─────────────────────────────────────────
-// Public fetch — no auth
-// ─────────────────────────────────────────
 
 export const fetchPublic = async (
   url: string,

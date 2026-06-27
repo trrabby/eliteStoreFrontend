@@ -19,6 +19,7 @@ import { selectCurrentUser } from "@/store/slices/authSlice";
 import { formatBDT } from "@/lib/utils/currency";
 import { computeVendorShipping } from "@/lib/utils/cart";
 import { getBaseShippingRate } from "@/lib/utils/shipping";
+import { useUsers } from "@/lib/hooks/useUser";
 
 const Player = dynamic(
   () => import("@lottiefiles/react-lottie-player").then((m) => m.Player),
@@ -35,6 +36,7 @@ export function CartDrawer() {
   const { displayItems, loading, subtotal, savings } = useCartDisplay();
   const defaultAddress = user?.defaultAddress;
   const baseRate = getBaseShippingRate(defaultAddress);
+  const { userAndNoAccesstoken } = useUsers();
 
   // Close on Escape
   useEffect(() => {
@@ -119,29 +121,30 @@ export function CartDrawer() {
             </div>
 
             {/* Guest notice */}
-            {!user && itemCount > 0 && (
-              <div
-                className="mx-5 mt-3 flex items-center justify-between gap-2
+            {(!user && itemCount > 0) ||
+              (userAndNoAccesstoken && itemCount > 0 && (
+                <div
+                  className="mx-5 mt-3 flex items-center justify-between gap-2
                               bg-primary-pale rounded-xl px-3 py-2 text-xs"
-              >
-                <span className="text-gray-600">
-                  <span className="font-semibold text-primary">
-                    Not logged in.
-                  </span>{" "}
-                  Cart saved locally.
-                </span>
-                <button
-                  onClick={() => {
-                    dispatch(toggleCart());
-                    router.push("/login?redirect=/cart");
-                  }}
-                  className="shrink-0 flex items-center gap-1 text-primary font-medium hover:underline"
                 >
-                  <LogIn size={12} />
-                  Login
-                </button>
-              </div>
-            )}
+                  <span className="text-gray-600">
+                    <span className="font-semibold text-primary">
+                      Not logged in.
+                    </span>{" "}
+                    Cart saved locally.
+                  </span>
+                  <button
+                    onClick={() => {
+                      dispatch(toggleCart());
+                      router.push("/login?redirect=/cart");
+                    }}
+                    className="shrink-0 flex items-center gap-1 text-primary font-medium hover:underline"
+                  >
+                    <LogIn size={12} />
+                    Login
+                  </button>
+                </div>
+              ))}
 
             {/* Items */}
             <div className="flex-1 overflow-y-auto px-5">
@@ -215,7 +218,7 @@ export function CartDrawer() {
             {/* Summary / CTA */}
             {itemCount > 0 && displayItems.length > 0 && (
               <div className="px-5 pb-6 pt-3">
-                {user ? (
+                {user && !userAndNoAccesstoken ? (
                   <CartSummary
                     items={displayItems}
                     subtotal={subtotal}

@@ -26,6 +26,8 @@ import { MobileSidebarDrawer } from "@/components/shared/MobileSidebarDrawer";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import { setLogout, selectCurrentUser } from "@/store/slices/authSlice";
 import { useLogout } from "@/lib/hooks/useLogout";
+import { useUsers } from "@/lib/hooks/useUser";
+import { toast } from "sonner";
 
 const VENDOR_NAV = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/vendor/dashboard" },
@@ -48,10 +50,8 @@ function VendorNav({
   onNavigate?: () => void;
   dark?: boolean;
 }) {
-  const dispatch = useAppDispatch();
-  const router = useRouter();
   const user = useAppSelector(selectCurrentUser);
-
+  const { userAndNoAccesstoken } = useUsers();
   const firstName = user?.accountInfo?.firstName ?? "";
   const lastName = user?.accountInfo?.lastName ?? "";
   const avatarLetter = firstName.charAt(0).toUpperCase() || "V";
@@ -59,9 +59,12 @@ function VendorNav({
 
   const handleLogout = async () => {
     await logout();
-    dispatch(setLogout());
-    router.push("/login");
   };
+
+  if (userAndNoAccesstoken) {
+    handleLogout();
+    toast.error("Session Expired. Please Login");
+  }
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}

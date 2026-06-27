@@ -1,10 +1,11 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react/no-unescaped-entities */
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight } from "lucide-react";
@@ -36,11 +37,36 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+// ─── SearchParams Handler ─────────────────────────────────────────
+function SearchParamsHandler({
+  onRedirect,
+}: {
+  onRedirect: (path: string | null) => void;
+}) {
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
+  // console.log(redirect);
+  useEffect(() => {
+    if (
+      redirect === null &&
+      redirect !== "/checkout" &&
+      redirect !== "/" &&
+      redirect !== "/login" &&
+      redirect !== "/register"
+    ) {
+      // Optional: show a toast when redirected to login
+      toast.info("Please login to continue");
+    }
+    onRedirect(redirect || "/");
+  }, [redirect, onRedirect]);
+
+  return null;
+}
+
+// ─── Main Component ──────────────────────────────────────────────
 export default function LoginPage() {
   const dispatch = useDispatch<AppDispatch>();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") ?? "/";
+  const [redirectPath, setRedirectPath] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
   // Get local cart items from Redux
@@ -119,16 +145,7 @@ export default function LoginPage() {
       );
       dispatch(setWishlist(productIds));
 
-      // 6. Redirect
-      const redirectTo =
-        redirect?.startsWith("/") &&
-        redirect !== "/login" &&
-        redirect !== "/register"
-          ? redirect
-          : "/";
       toast.success("Welcome back 👋", { id: toastId });
-      router.push(redirectTo);
-      router.refresh();
     } catch (error) {
       console.error(error);
       toast.error("Something went wrong. Please try again.", { id: toastId });
@@ -142,6 +159,11 @@ export default function LoginPage() {
       title="Welcome back"
       subtitle="Sign in to your Elite Store account"
     >
+      {/* ─── SearchParams handler ─── */}
+      <Suspense fallback={null}>
+        <SearchParamsHandler onRedirect={setRedirectPath} />
+      </Suspense>
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <FormInput
           label="Email address"
@@ -210,7 +232,8 @@ export default function LoginPage() {
         </MagneticButton>
       </form>
 
-      <OAuthButtons redirect={redirect} />
+      {/* OAuthButtons receives the redirect path */}
+      <OAuthButtons redirect={redirectPath} />
 
       <p className="text-center text-sm text-gray-500 mt-6">
         Don't have an account?{" "}

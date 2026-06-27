@@ -32,6 +32,7 @@ import { MobileSidebarDrawer } from "@/components/shared/MobileSidebarDrawer";
 import { useAppSelector } from "@/store/hook";
 import { selectCurrentUser } from "@/store/slices/authSlice";
 import { useLogout } from "@/lib/hooks/useLogout";
+import { useUsers } from "@/lib/hooks/useUser";
 
 const ADMIN_NAV = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin/dashboard" },
@@ -60,21 +61,20 @@ function AdminNav({
   onNavigate?: () => void;
 }) {
   const logout = useLogout();
-  const router = useRouter();
   const user = useAppSelector(selectCurrentUser);
-
+  const { userAndNoAccesstoken } = useUsers();
   const firstName = user?.accountInfo?.firstName ?? "";
   const lastName = user?.accountInfo?.lastName ?? "";
   const avatarLetter = firstName.charAt(0).toUpperCase() || "A";
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      router.push("/login");
-    } catch {
-      toast.error("Something went wrong");
-    }
+    await logout();
   };
+  console.log(userAndNoAccesstoken);
+  if (userAndNoAccesstoken) {
+    handleLogout();
+    toast.error("Session Expired. Please Login");
+  }
 
   return (
     <div className="flex flex-col h-full">
