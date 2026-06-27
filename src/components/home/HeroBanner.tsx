@@ -207,7 +207,7 @@ export function HeroBanner() {
       {/* Prev / Next */}
       <button
         onClick={scrollPrev}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-20
+        className="absolute left-4 top-1/2 -translate-y-1/2 z-1
                    w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm
                    border border-white/30 flex items-center justify-center
                    text-white hover:bg-white/40 transition-all"
@@ -217,7 +217,7 @@ export function HeroBanner() {
       </button>
       <button
         onClick={scrollNext}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-20
+        className="absolute right-4 top-1/2 -translate-y-1/2 z-1
                    w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm
                    border border-white/30 flex items-center justify-center
                    text-white hover:bg-white/40 transition-all"

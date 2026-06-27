@@ -14,14 +14,13 @@ export default async function PublicLayout({
 }) {
   // fetch categories server-side — SSG, revalidate 10min
   const categoriesRes = await getCategoryTree();
-  const rootCategories =
-    categoriesRes?.data?.filter((c: any) => c.depth === 0)?.slice(0, 20) ?? [];
+  const allCategories = categoriesRes?.data;
 
   return (
     <SocketProvider>
       <div className="min-h-screen flex flex-col">
         <Header />
-        <CategoryBar categories={rootCategories} />
+        <CategoryBar categories={allCategories} />
         <main className="flex-1 pb-16 lg:pb-0">{children}</main>
         <Footer />
         <MobileNav />

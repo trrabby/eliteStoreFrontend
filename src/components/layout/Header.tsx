@@ -18,7 +18,7 @@ import { Logo } from "@/components/shared/Logo";
 import { NotificationBell } from "@/components/shared/NotificationBell";
 import { SearchBar } from "@/components/shared/SearchBar";
 import { useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { CartDrawer } from "../cart/CartDrawer";
 import Image from "next/image";
 import { useAppSelector } from "@/store/hook";
@@ -36,6 +36,7 @@ import { addToCart as addToCartAPI } from "@/services/cart.service";
 import { setItemsFromDB, startSync, syncDone } from "@/store/slices/cartSlice";
 import { getCurrentUser } from "@/services/auth.service";
 import { useLogout } from "@/lib/hooks/useLogout";
+import { CartButton } from "../cart/CartButtonComponent";
 
 export function Header() {
   const dispatch = useDispatch();
@@ -215,9 +216,7 @@ export function Header() {
             >
               <Search size={20} />
             </button>
-
             {mounted && user && <NotificationBell />}
-
             <Link
               href="/account/wishlist"
               className="p-2 text-brand-600 hover:text-primary transition-colors"
@@ -227,29 +226,7 @@ export function Header() {
             </Link>
 
             {/* Cart button */}
-            <button
-              className="p-2 text-brand-600 hover:text-primary transition-colors relative"
-              onClick={() => dispatch(toggleCart())}
-              aria-label="Cart"
-            >
-              <ShoppingBag size={20} />
-
-              <AnimatePresence>
-                {totalItems > 0 && (
-                  <motion.span
-                    key={totalItems}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    className="absolute -top-0.5 -right-0.5 w-5 h-5
-                               bg-primary text-white text-xs font-bold
-                               rounded-full flex items-center justify-center"
-                  >
-                    {totalItems > 99 ? "99+" : totalItems}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </button>
+            <CartButton />
 
             {/* User account section */}
             {mounted &&

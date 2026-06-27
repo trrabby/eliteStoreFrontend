@@ -114,7 +114,10 @@ export function ProductCard({
 
       if (res?.success) {
         toast.success("Added to cart!");
-        if (imgRef.current) flyToCart(image?.url ?? "", imgRef.current);
+        if (imgRef.current) {
+          const imgSrc = image?.url || "/placeholder.png";
+          flyToCart(imgSrc, imgRef.current);
+        }
       } else if (res && !res?.success) {
         toast.error((res as { message?: string }).message ?? "Failed to add");
       }

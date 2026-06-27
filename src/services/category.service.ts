@@ -16,7 +16,11 @@ export const getCategoryTree = async () => {
 // get category by slug — public, SSG
 export const getCategoryBySlug = async (slug: string) => {
   try {
-    return await fetchPublic(`/categories/slug/${slug}`, {}, 600);
+    return await fetchPublic(
+      `/categories/slug/${slug}${buildQuery({ isActive: true })}`,
+      undefined,
+      600,
+    );
   } catch (error: any) {
     return Error(error);
   }

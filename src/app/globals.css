@@ -152,6 +152,15 @@ h3 {
   color: rgb(17 24 39);
 }
 
+/* Reusable active filter chip */
+.chip {
+  @apply flex items-center gap-1.5 bg-primary-pale border border-primary/20
+         text-xs font-medium text-primary px-2.5 py-1.5 rounded-full;
+}
+.chip button {
+  @apply hover:text-primary transition-colors;
+}
+
 @keyframes float {
   0%,
   100% {

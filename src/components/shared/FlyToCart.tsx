@@ -1,8 +1,5 @@
 "use client";
 
-// Global fly-to-cart animation system
-// Products clone their image and fly as an arc to the cart icon
-
 import {
   createContext,
   useContext,
@@ -39,36 +36,56 @@ export function FlyToCartProvider({ children }: { children: ReactNode }) {
 
   const registerCartRef = useCallback((el: HTMLElement | null) => {
     cartRef.current = el;
+    // console.log("Cart ref registered:", el);
   }, []);
 
   const flyToCart = useCallback((imgSrc: string, fromEl: HTMLElement) => {
-    if (!cartRef.current || typeof window === "undefined") return;
+    // Guard: ensure cart ref exists
+    if (!cartRef.current) {
+      console.warn("FlyToCart: cart ref not registered");
+      return;
+    }
 
-    const fromRect = fromEl.getBoundingClientRect();
-    const toRect = cartRef.current.getBoundingClientRect();
+    // Guard: ensure fromEl is valid
+    if (!fromEl) {
+      console.warn("FlyToCart: fromEl is null");
+      return;
+    }
 
-    const from = {
-      x: fromRect.left + fromRect.width / 2,
-      y: fromRect.top + fromRect.height / 2,
-    };
-    const to = {
-      x: toRect.left + toRect.width / 2,
-      y: toRect.top + toRect.height / 2,
-    };
+    // Use a placeholder if image src is empty
+    const src = imgSrc || "/placeholder.png";
 
-    const id = `fly-${Date.now()}-${Math.random()}`;
-    setItems((prev) => [...prev, { id, src: imgSrc, from, to }]);
+    try {
+      const fromRect = fromEl.getBoundingClientRect();
+      const toRect = cartRef.current.getBoundingClientRect();
 
-    // remove after animation
-    setTimeout(() => {
-      setItems((prev) => prev.filter((i) => i.id !== id));
-    }, 900);
+      // console.log("From:", fromRect);
+      // console.log("To:", toRect);
+
+      const from = {
+        x: fromRect.left + fromRect.width / 2,
+        y: fromRect.top + fromRect.height / 2,
+      };
+      const to = {
+        x: toRect.left + toRect.width / 2,
+        y: toRect.top + toRect.height / 2,
+      };
+
+      const id = `fly-${Date.now()}-${Math.random()}`;
+      setItems((prev) => [...prev, { id, src, from, to }]);
+
+      // remove after animation
+      setTimeout(() => {
+        setItems((prev) => prev.filter((i) => i.id !== id));
+      }, 900);
+    } catch (error) {
+      console.error("FlyToCart error:", error);
+    }
   }, []);
 
   return (
     <FlyContext.Provider value={{ registerCartRef, flyToCart }}>
       {children}
-      {/* Flying items rendered at root level */}
       <AnimatePresence>
         {items.map((item) => (
           <FlyingItem key={item.id} item={item} />
@@ -85,10 +102,12 @@ function FlyingItem({ item }: { item: FlyItem }) {
 
   return (
     <motion.div
-      className="fixed pointer-events-none z-9999"
+      className="fixed pointer-events-none z-[9999]"
       style={{
         left: item.from.x - 30,
         top: item.from.y - 30,
+        width: 60,
+        height: 60,
       }}
       initial={{ opacity: 1, scale: 1 }}
       animate={{
@@ -107,10 +126,10 @@ function FlyingItem({ item }: { item: FlyItem }) {
       <Image
         src={item.src}
         alt=""
-        height={50}
-        width={50}
-        className="w-15 h-15 rounded-xl object-cover
-                   shadow-pink border-2 border-white"
+        fill
+        className="rounded-xl object-cover shadow-pink border-2 border-white"
+        sizes="60px"
+        unoptimized
       />
     </motion.div>
   );
