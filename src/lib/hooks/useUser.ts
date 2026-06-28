@@ -15,10 +15,12 @@ export const useUsers = () => {
 
   useEffect(() => {
     const chkUserAndAccesstoken = async () => {
-      const currentUserTokenDecoded = await getCurrentUser();
-      // console.log(currentUserTokenDecoded);
-      if (user && !currentUserTokenDecoded) {
-        setUserAndNoAccesstoken(true);
+      if (user) {
+        const currentUserTokenDecoded = await getCurrentUser();
+        // console.log(currentUserTokenDecoded);
+        if (user && !currentUserTokenDecoded) {
+          setUserAndNoAccesstoken(true);
+        }
       }
     };
     chkUserAndAccesstoken();

@@ -5,11 +5,10 @@
 
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ShoppingBag, Heart, User, Menu, X } from "lucide-react";
+import { Search, Heart, User, Menu, X } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 import {
-  toggleCart,
   toggleSearch,
   toggleMobileMenu,
   closeAll,
@@ -43,17 +42,24 @@ export function Header() {
   const pathname = usePathname();
   const logout = useLogout();
   const [mounted, setMounted] = useState(false);
-  const cart = useSelector((state: RootState) => state.cart);
   const isSearchOpen = useSelector((state: RootState) => state.ui.isSearchOpen);
   const { data: session, status } = useSession();
   const user = useAppSelector(selectCurrentUser);
-  const totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+  // console.log(session, status);
 
   useEffect(() => {
     const chkUserAndAccesstoken = async () => {
       const currentUserTokenDecoded = await getCurrentUser();
       // console.log(currentUserTokenDecoded);
       if (user && !currentUserTokenDecoded) {
+        await logout();
+        toast.error("Session Expired. Please Login");
+      }
+      if (
+        status === "authenticated" &&
+        session?.user?.email &&
+        !currentUserTokenDecoded
+      ) {
         await logout();
         toast.error("Session Expired. Please Login");
       }
@@ -72,7 +78,12 @@ export function Header() {
   // Handle user login and cart sync
   useEffect(() => {
     const syncReduxUser = async () => {
-      if (status === "authenticated" && session?.user?.email) {
+      const currentUserTokenDecoded = await getCurrentUser();
+      if (
+        status === "authenticated" &&
+        session?.user?.email &&
+        currentUserTokenDecoded
+      ) {
         try {
           // Check if we have guest cart items in localStorage
           const guestCartStr = localStorage.getItem("guest_cart");
