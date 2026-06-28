@@ -4,21 +4,25 @@ import { SearchPageClient } from "./SearchPageClient";
 
 export const dynamic = "force-dynamic";
 
-type Props = { searchParams: { q?: string } };
+type Props = {
+  searchParams: Promise<{ q?: string }>; // 👈 note: it's a Promise
+};
 
 export async function generateMetadata({
   searchParams,
 }: Props): Promise<Metadata> {
-  const q = searchParams.q ?? "";
+  const { q = "" } = await searchParams;
   return {
     title: q ? `"${q}" — Search | Elite Store` : "Search | Elite Store",
   };
 }
 
-export default function SearchPage({ searchParams }: Props) {
+export default async function SearchPage({ searchParams }: Props) {
+  const { q = "" } = await searchParams;
+
   return (
     <Suspense>
-      <SearchPageClient query={searchParams.q ?? ""} />
+      <SearchPageClient query={q} />
     </Suspense>
   );
 }

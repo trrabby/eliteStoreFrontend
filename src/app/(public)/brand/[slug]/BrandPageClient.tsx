@@ -410,7 +410,7 @@ export function BrandPageClient({
 
   const breadcrumbs = [
     { label: "Home", href: "/" },
-    { label: "Brands", href: "/brands" },
+    { label: "Brands", href: "/brand" },
     { label: brand.name },
   ];
 

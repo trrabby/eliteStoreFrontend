@@ -77,8 +77,8 @@ export function CategoryScroll({ categories }: { categories: Category[] }) {
       <div className="container-elite mb-6">
         <SectionHeader
           title="Shop by Category"
-          href="/products"
-          linkLabel="All Products"
+          href="/category"
+          linkLabel="All Categories"
         />
       </div>
 
@@ -134,12 +134,12 @@ export function CategoryScroll({ categories }: { categories: Category[] }) {
               <motion.div
                 key={cat.id}
                 variants={itemVariants}
-                className="flex-[0_0_auto] w-[140px] sm:w-[160px]"
+                className="flex-[0_0_auto] w-35 sm:w-40"
               >
                 <Link href={`/category/${cat.slug}`}>
                   {/* Outer container with clip-path – no animations */}
                   <div
-                    className="relative aspect-[4/5] bg-white/60 backdrop-blur-md shadow-lg hover:shadow-xl border border-white/80 hover:border-[#ff3e9b]/30 transition-all duration-300 overflow-hidden will-change-transform"
+                    className="relative aspect-4/5 bg-white/60 backdrop-blur-md shadow-lg hover:shadow-xl border border-white/80 hover:border-primary/30 transition-all duration-300 overflow-hidden will-change-transform"
                     style={{
                       clipPath: "polygon(0% 0%, 100% 8%, 100% 92%, 0% 100%)",
                       transformOrigin: "center center",
@@ -172,7 +172,7 @@ export function CategoryScroll({ categories }: { categories: Category[] }) {
                             sizes="160px"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-4xl bg-[#ffedfa]/70">
+                          <div className="w-full h-full flex items-center justify-center text-4xl bg-primary-pale/70">
                             {cat.icon || "🛍️"}
                           </div>
                         )}
@@ -181,7 +181,7 @@ export function CategoryScroll({ categories }: { categories: Category[] }) {
                       {/* Top left Count Badge */}
                       {cat.productCount !== undefined &&
                         cat.productCount > 0 && (
-                          <div className="absolute top-2 left-2 z-10 bg-white/80 backdrop-blur-sm text-[9px] font-bold text-primary px-2 py-0.5 rounded-full border border-[#ff88ba]/30 shadow-sm">
+                          <div className="absolute top-2 left-2 z-10 bg-white/80 backdrop-blur-sm text-[9px] font-bold text-primary px-2 py-0.5 rounded-full border border-primary-light/30 shadow-sm">
                             {cat.productCount} items
                           </div>
                         )}
@@ -206,12 +206,12 @@ export function CategoryScroll({ categories }: { categories: Category[] }) {
 
             <motion.div
               variants={itemVariants}
-              className="flex-[0_0_auto] w-[140px] sm:w-[160px]"
+              className="flex-[0_0_auto] w-35 sm:w-40"
             >
-              <Link href="/products">
+              <Link href="/category">
                 {/* ─── Outer container – stable clip-path ─── */}
                 <div
-                  className="group relative aspect-[4/5] bg-white/60 backdrop-blur-md shadow-lg hover:shadow-xl border border-white/80 hover:border-primary/30 transition-all duration-300 overflow-hidden will-change-transform"
+                  className="group relative aspect-4/5 bg-white/60 backdrop-blur-md shadow-lg hover:shadow-xl border border-white/80 hover:border-primary/30 transition-all duration-300 overflow-hidden will-change-transform"
                   style={{
                     clipPath: "polygon(0% 0%, 100% 8%, 100% 92%, 0% 100%)",
                     transformOrigin: "center center",
@@ -234,7 +234,7 @@ export function CategoryScroll({ categories }: { categories: Category[] }) {
                     className="w-full h-full relative"
                   >
                     {/* Full Bleed background – gradient + subtle pattern */}
-                    <div className="absolute inset-0 pb-14 bg-gradient-to-br from-primary-light/30 via-primary-pale/50 to-white/40">
+                    <div className="absolute inset-0 pb-14 bg-linear-to-br from-primary-light/30 via-primary-pale/50 to-white/40">
                       {/* Subtle icon in background */}
                       <div className="absolute inset-0 flex items-center justify-center text-6xl text-primary/10">
                         ➜
@@ -243,7 +243,7 @@ export function CategoryScroll({ categories }: { categories: Category[] }) {
 
                     {/* Top left Count Badge – showing total items across all categories */}
                     {categories.length > 0 && (
-                      <div className="absolute top-2 left-2 z-10 bg-white/80 backdrop-blur-sm text-[9px] font-bold text-primary px-2 py-0.5 rounded-full border border-[#ff88ba]/30 shadow-sm">
+                      <div className="absolute top-2 left-2 z-10 bg-white/80 backdrop-blur-sm text-[9px] font-bold text-primary px-2 py-0.5 rounded-full border border-primary-light/30 shadow-sm">
                         {categories.reduce(
                           (acc, c) => acc + (c.productCount || 0),
                           0,

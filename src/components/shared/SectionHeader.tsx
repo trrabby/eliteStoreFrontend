@@ -39,11 +39,7 @@ export function SectionHeader({
           className="section-title"
         >
           {title}
-          {/* pink underline accent */}
-          <span
-            className="block mt-1 w-12 h-1 rounded-full
-                           bg-gradient-primary"
-          />
+          <span className="block mt-1 w-12 h-1 rounded-full bg-gradient-primary" />
         </motion.h2>
         {subtitle && (
           <motion.p
@@ -56,8 +52,33 @@ export function SectionHeader({
             {subtitle}
           </motion.p>
         )}
+
+        {/* ─── Link when centered ─── */}
+        {href && centered && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="mt-3"
+          >
+            <Link
+              href={href}
+              className="inline-flex items-center gap-1.5 text-sm font-medium
+                         text-primary hover:gap-2.5 transition-all duration-200
+                         group"
+            >
+              {linkLabel}
+              <ArrowRight
+                size={16}
+                className="group-hover:translate-x-1 transition-transform"
+              />
+            </Link>
+          </motion.div>
+        )}
       </div>
 
+      {/* ─── Link when NOT centered ─── */}
       {href && !centered && (
         <motion.div
           initial={{ opacity: 0, x: 10 }}

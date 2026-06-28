@@ -29,9 +29,10 @@ export function BrandSection({ brands }: { brands: Brand[] }) {
   return (
     <section className="py-12 bg-gradient-pale">
       <div className="container-elite">
+        {/* ─── Header with "View All" link ─── */}
         <SectionHeader
           title="Top Brands"
-          href="/products"
+          href="/brand" // ✅ changed to "/brand"
           linkLabel="All Brands"
           centered
         />
@@ -72,8 +73,8 @@ export function BrandSection({ brands }: { brands: Brand[] }) {
                   ) : (
                     <span
                       className="text-xs font-bold text-gray-500
-                                     text-center group-hover:text-primary
-                                     transition-colors"
+                                 text-center group-hover:text-primary
+                                 transition-colors"
                     >
                       {brand.name}
                     </span>

@@ -464,11 +464,12 @@ export function CategoryPageClient({
   const breadcrumbs = useMemo(() => {
     const items: { label: string; href?: string }[] = [
       { label: "Home", href: "/" },
+      { label: "Categories", href: "/category" },
     ];
     if (category.parent) {
       items.push({
         label: category.parent.name,
-        href: `/category/${category.parent.slug}`,
+        href: `/${category.parent.slug}`,
       });
     }
     items.push({ label: category.name });

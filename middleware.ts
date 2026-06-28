@@ -22,15 +22,6 @@ export default async function middleware(req: NextRequest) {
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
-
-  // // already logged in — redirect away from auth pages
-  // const isAuthPage = ["/login", "/register"].some((r) =>
-  //   pathname.startsWith(r),
-  // );
-
-  // if (isAuthPage && accessToken) {
-  //   return NextResponse.redirect(new URL("/", req.url));
-  // }
 }
 
 export const config = {
