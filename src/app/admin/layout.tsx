@@ -60,6 +60,7 @@ function AdminNav({
   pathname: string;
   onNavigate?: () => void;
 }) {
+  const router = useRouter();
   const logout = useLogout();
   const user = useAppSelector(selectCurrentUser);
   const { userAndNoAccesstoken } = useUsers();
@@ -69,8 +70,9 @@ function AdminNav({
 
   const handleLogout = async () => {
     await logout();
+    router.push("/");
   };
-  console.log(userAndNoAccesstoken);
+  // console.log(userAndNoAccesstoken);
   if (userAndNoAccesstoken) {
     handleLogout();
     toast.error("Session Expired. Please Login");

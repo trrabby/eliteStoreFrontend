@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
@@ -16,26 +15,18 @@ import {
 import { Logo } from "@/components/shared/Logo";
 import { NotificationBell } from "@/components/shared/NotificationBell";
 import { SearchBar } from "@/components/shared/SearchBar";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CartDrawer } from "../cart/CartDrawer";
 import Image from "next/image";
 import { useAppSelector } from "@/store/hook";
-import { selectCurrentUser, setUser } from "@/store/slices/authSlice";
+import { selectCurrentUser } from "@/store/slices/authSlice";
 import { useSession } from "next-auth/react";
-import { getMyProfile } from "@/services/user.service";
 import { toast } from "sonner";
-import { normalizeUser } from "@/lib/utils/normalizeUser";
-import { getCart } from "@/services/cart.service";
-import { getWishlist } from "@/services/wishlist.service";
-import { getMyNotifications } from "@/services/notification.service";
-import { setNotifications } from "@/store/slices/notificationSlice";
-import { setWishlist } from "@/store/slices/wishlistSlice";
-import { addToCart as addToCartAPI } from "@/services/cart.service";
-import { setItemsFromDB, startSync, syncDone } from "@/store/slices/cartSlice";
 import { getCurrentUser } from "@/services/auth.service";
 import { useLogout } from "@/lib/hooks/useLogout";
 import { CartButton } from "../cart/CartButtonComponent";
+import { useUserSync } from "@/lib/hooks/useUserSync";
 
 export function Header() {
   const dispatch = useDispatch();
@@ -45,27 +36,58 @@ export function Header() {
   const isSearchOpen = useSelector((state: RootState) => state.ui.isSearchOpen);
   const { data: session, status } = useSession();
   const user = useAppSelector(selectCurrentUser);
-  // console.log(session, status);
+  const { syncUser } = useUserSync();
+  const hasSynced = useRef(false);
 
+  // ── Sync user data when session becomes authenticated (but only once) ──
   useEffect(() => {
-    const chkUserAndAccesstoken = async () => {
-      const currentUserTokenDecoded = await getCurrentUser();
-      // console.log(currentUserTokenDecoded);
-      if (user && !currentUserTokenDecoded) {
+    const syncIfNeeded = async () => {
+      if (status !== "authenticated") return;
+      if (hasSynced.current) return;
+      if (!session?.user?.email) return;
+
+      // Check if we already have a user in Redux (from previous session)
+      if (user) {
+        hasSynced.current = true;
+        return;
+      }
+
+      // Verify that the backend token exists
+      const token = await getCurrentUser();
+      if (!token) {
+        // Session exists but backend token missing – maybe expired
+        return;
+      }
+
+      hasSynced.current = true;
+      try {
+        await syncUser();
+        toast.success("Enjoy your shopping!");
+      } catch (error) {
+        console.error("Sync failed:", error);
+        toast.error("Failed to sync your data");
+        hasSynced.current = false; // allow retry
+      }
+    };
+
+    syncIfNeeded();
+  }, [status, session, user, syncUser]);
+
+  // ── Session expiration check (still needed) ──
+  useEffect(() => {
+    const checkToken = async () => {
+      const token = await getCurrentUser();
+      if (user && !token) {
         await logout();
         toast.error("Session Expired. Please Login");
       }
-      if (
-        status === "authenticated" &&
-        session?.user?.email &&
-        !currentUserTokenDecoded
-      ) {
+      if (status === "authenticated" && session?.user?.email && !token) {
         await logout();
         toast.error("Session Expired. Please Login");
       }
     };
-    chkUserAndAccesstoken();
-  }, []);
+    checkToken();
+  }, []); // runs once
 
   useEffect(() => {
     setMounted(true);
@@ -74,121 +96,6 @@ export function Header() {
   useEffect(() => {
     dispatch(closeAll());
   }, [pathname, dispatch]);
-
-  // Handle user login and cart sync
-  useEffect(() => {
-    const syncReduxUser = async () => {
-      const currentUserTokenDecoded = await getCurrentUser();
-      if (
-        status === "authenticated" &&
-        session?.user?.email &&
-        currentUserTokenDecoded
-      ) {
-        try {
-          // Check if we have guest cart items in localStorage
-          const guestCartStr = localStorage.getItem("guest_cart");
-          const hasGuestCart =
-            guestCartStr && JSON.parse(guestCartStr)?.items?.length > 0;
-
-          // Fetch user profile
-          const profileResponse = await getMyProfile();
-          if (!profileResponse?.success) {
-            toast.error("Failed to retrieve user profile");
-            return;
-          }
-
-          const reduxUser = normalizeUser(profileResponse as any);
-
-          // Sync guest cart with server if exists
-          if (hasGuestCart) {
-            dispatch(startSync()); // From cartSlice
-
-            try {
-              const guestCart = JSON.parse(guestCartStr);
-              const guestItems = guestCart.items;
-
-              // Add each guest item to server cart using the API
-              let allSuccess = true;
-              for (const item of guestItems) {
-                const formData = new FormData();
-                formData.append(
-                  "data",
-                  JSON.stringify({
-                    productId: item.productId,
-                    variantId: item.variantId,
-                    quantity: item.quantity,
-                  }),
-                );
-
-                const result = await addToCartAPI(formData);
-                if (!result?.success) {
-                  console.error(`Failed to sync item ${item.variantId}`);
-                  allSuccess = false;
-                }
-              }
-
-              if (allSuccess) {
-                // Fetch fresh cart from server and update Redux
-                const cartResponse = await getCart();
-                if (
-                  cartResponse?.success &&
-                  Array.isArray(cartResponse.data?.items)
-                ) {
-                  // Use setItemsFromDB to update the cart state
-                  dispatch(setItemsFromDB(cartResponse.data.items));
-                }
-                // Clear guest cart from localStorage after successful sync
-                localStorage.removeItem("guest_cart");
-                toast.success("Cart synced successfully!");
-              } else {
-                dispatch(syncDone()); // Set isSyncing to false
-                toast.warning("Some items couldn't be synced");
-              }
-            } catch (error) {
-              console.error("Cart sync error:", error);
-              dispatch(syncDone());
-              toast.error("Failed to sync cart");
-            }
-          } else {
-            // No guest cart, just fetch the user's cart from server
-            const cartResponse = await getCart();
-            if (
-              cartResponse?.success &&
-              Array.isArray(cartResponse.data?.items)
-            ) {
-              dispatch(setItemsFromDB(cartResponse.data.items));
-            }
-          }
-
-          // Fetch other user data (wishlist, notifications)
-          const [wishlistResponse, notificationsResponse] = await Promise.all([
-            getWishlist(),
-            getMyNotifications({}),
-          ]);
-
-          // Hydrate redux with user data
-          dispatch(setUser({ user: reduxUser }));
-
-          if (wishlistResponse?.success) {
-            const productIds = (wishlistResponse.data?.items ?? []).map(
-              (item: any) => item.productId,
-            );
-            dispatch(setWishlist(productIds));
-          }
-
-          if (notificationsResponse?.success) {
-            dispatch(setNotifications(notificationsResponse.data));
-          }
-        } catch (error) {
-          console.error("Error syncing user data:", error);
-          toast.error("Failed to sync your data");
-          dispatch(syncDone());
-        }
-      }
-    };
-
-    syncReduxUser();
-  }, [session, status, dispatch]);
 
   return (
     <>

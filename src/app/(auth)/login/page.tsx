@@ -1,12 +1,11 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 /* eslint-disable react/no-unescaped-entities */
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
@@ -18,17 +17,8 @@ import { FormInput } from "@/components/shared/FormInput";
 import { OAuthButtons } from "@/components/shared/OAuthButtons";
 import { MagneticButton } from "@/components/shared/MagneticButton";
 import { loginUser } from "@/services/auth.service";
-import { getMyProfile } from "@/services/user.service";
 import { emailSchema, passwordSchema } from "@/lib/utils/validation";
-import { AppDispatch, RootState } from "@/store";
-import { setUser } from "@/store/slices/authSlice";
-import { normalizeUser } from "@/lib/utils/normalizeUser";
-import { getCart, addToCart } from "@/services/cart.service";
-import { getWishlist } from "@/services/wishlist.service";
-import { setWishlist } from "@/store/slices/wishlistSlice";
-import { getMyNotifications } from "@/services/notification.service";
-import { setNotifications } from "@/store/slices/notificationSlice";
-import { clearCart, setItemsFromDB } from "@/store/slices/cartSlice";
+import { useUserSync } from "@/lib/hooks/useUserSync";
 
 const schema = z.object({
   email: emailSchema,
@@ -45,32 +35,27 @@ function SearchParamsHandler({
 }) {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
-  // console.log(redirect);
+
   useEffect(() => {
+    // Show toast only when redirect is a non-null string that is NOT a public page
     if (
-      redirect === null &&
-      redirect !== "/checkout" &&
+      redirect &&
       redirect !== "/" &&
       redirect !== "/login" &&
       redirect !== "/register"
     ) {
-      // Optional: show a toast when redirected to login
       toast.info("Please login to continue");
     }
     onRedirect(redirect || "/");
-  }, [redirect, onRedirect]);
+  }, [onRedirect]);
 
   return null;
 }
 
 // ─── Main Component ──────────────────────────────────────────────
 export default function LoginPage() {
-  const dispatch = useDispatch<AppDispatch>();
   const [redirectPath, setRedirectPath] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-
-  // Get local cart items from Redux
-  const localCartItems = useSelector((state: RootState) => state.cart.items);
 
   const {
     register,
@@ -79,6 +64,9 @@ export default function LoginPage() {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
+
+  // In LoginPage
+  const { syncUser } = useUserSync();
 
   const onSubmit = async (values: FormData) => {
     setLoading(true);
@@ -91,61 +79,9 @@ export default function LoginPage() {
         return;
       }
 
-      // 2. Fetch user profile
-      const profileResponse = await getMyProfile();
-      if (!profileResponse?.success) {
-        toast.error("Failed to retrieve user profile", { id: toastId });
-        return;
-      }
-      const reduxUser = normalizeUser(profileResponse as any);
-      dispatch(setUser({ user: reduxUser }));
-
-      // 3. Sync local cart items to database
-      if (localCartItems.length > 0) {
-        toast.loading("Syncing your cart...", { id: toastId });
-        const syncPromises = localCartItems.map((item) => {
-          const formData = new FormData();
-          const payload = {
-            productId: item.productId,
-            variantId: item.variantId,
-            quantity: item.quantity,
-          };
-          formData.append("data", JSON.stringify(payload));
-          return addToCart(formData);
-        });
-
-        try {
-          await Promise.all(syncPromises);
-          toast.success("Cart synced successfully", { id: toastId });
-          dispatch(clearCart());
-        } catch (syncError) {
-          console.error("Error syncing cart:", syncError);
-          toast.warning(
-            "Cart sync had issues, but we'll fetch your latest cart.",
-          );
-        }
-      }
-
-      // 4. Fetch updated cart from database
-      const cart = await getCart();
-      if (cart?.success && Array.isArray(cart.data?.items)) {
-        dispatch(setItemsFromDB(cart.data.items));
-      } else {
-        // No cart items found, clear local cart
-        dispatch(clearCart());
-      }
-
-      // 5. Fetch wishlist and notifications
-      const wishlist: any = await getWishlist();
-      const notifications = await getMyNotifications({});
-
-      dispatch(setNotifications(notifications.data));
-      const productIds = (wishlist.data?.items ?? []).map(
-        (item: any) => item.productId,
-      );
-      dispatch(setWishlist(productIds));
-
-      toast.success("Welcome back 👋", { id: toastId });
+      // 2. Sync user data (profile, cart, wishlist, etc.)
+      await syncUser(redirectPath);
+      toast.success("Enjoy your shopping!", { id: toastId });
     } catch (error) {
       console.error(error);
       toast.error("Something went wrong. Please try again.", { id: toastId });
